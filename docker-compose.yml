@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=http://localhost:${MLFLOW_PORT:-5000}
+    networks:
+      - mlops-network
+
+  prefect:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PREFECT_PORT:-4200}:4200"
+    volumes:
+      - .:/app
+    environment:
+      - PREFECT_API_URL=http://0.0.0.0:${PREFECT_PORT:-4200}/api
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+    networks:
+      - mlops-network
+
+networks:
+  mlops-network:
+    driver: bridge 

@@ -172,3 +172,63 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# MLflow
+mlruns/
+.mlflow/
+
+# Prefect
+.prefect/
+.prefectignore
+
+# Docker
+.docker/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project specific
+*.pkl
+*.model
+*.joblib
+*.h5
+*.onnx
+*.pb
+*.tflite
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.npy
+*.npz
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.hdf5
+*.hdf
+*.sqlite
+*.db
+*.sqlite3
+*.db3
+*.s3db
+*.sl3
+*.db-journal
+*.sqlite-journal
+*.db-wal
+*.db-shm
+
+# Experimenting results
+Experimenting/Results/*
