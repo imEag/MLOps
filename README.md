@@ -69,5 +69,7 @@ poetry run python src/flows/training_flow.py
 
 - `MLFLOW_PORT`: Port for MLflow server (default: 5000)
 - `PREFECT_PORT`: Port for Prefect server (default: 4200)
-- `MLFLOW_TRACKING_URI`: MLflow server URL
-- `PREFECT_API_URL`: Prefect server URL
+- `POSTGRES_PORT`: Port for PostgreSQL database (default: 5432)
+- `POSTGRES_USER`: PostgreSQL username (default: postgres)
+- `POSTGRES_PASSWORD`: PostgreSQL password (default: postgres)
+- `POSTGRES_DB`: PostgreSQL database name (default: mlops)
