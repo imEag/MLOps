@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 from sklearn.metrics import roc_auc_score, recall_score, precision_score, f1_score, confusion_matrix
-from utils.training_functions import *
+from src.utils.training_functions import *
 import joblib
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -378,7 +378,7 @@ SPACE = 'ic';
 ICA = '58x25';
 RATIO = 79;
 STR_RATIO = '2to1'
-PROJECT_PATH = fr'/Users/imeag/Documents/udea/trabajoDeGrado/MLOps'
+PROJECT_PATH = '/app'  # Path inside the Docker container
 DATA_FILE_PATH = os.path.join(PROJECT_PATH, 'data', 'processed', f'Data_integration_ic_{NEURO}_{NAME}.feather')
 PATH = os.path.join(PROJECT_PATH, 'Experimenting')
 PATH_SAVE = os.path.join(PATH, 'Results', TIME_NOW)
