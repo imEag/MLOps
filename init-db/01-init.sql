@@ -2,6 +2,7 @@
 CREATE SCHEMA IF NOT EXISTS mlflow;
 CREATE SCHEMA IF NOT EXISTS predictions;
 CREATE SCHEMA IF NOT EXISTS training_data;
+CREATE SCHEMA IF NOT EXISTS prefect;
 
 -- Create tables for predictions
 CREATE TABLE IF NOT EXISTS predictions.prediction_logs (
@@ -33,7 +34,10 @@ CREATE INDEX IF NOT EXISTS idx_dataset_created_at ON training_data.dataset(creat
 GRANT ALL PRIVILEGES ON SCHEMA mlflow TO postgres;
 GRANT ALL PRIVILEGES ON SCHEMA predictions TO postgres;
 GRANT ALL PRIVILEGES ON SCHEMA training_data TO postgres;
+GRANT ALL PRIVILEGES ON SCHEMA prefect TO postgres;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA predictions TO postgres;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA training_data TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA prefect TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA predictions TO postgres;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA training_data TO postgres; 
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA training_data TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA prefect TO postgres; 

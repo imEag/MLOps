@@ -25,4 +25,4 @@ COPY . .
 ENV PYTHONPATH=/app
 ENV MLFLOW_TRACKING_URI=http://localhost:5000
 
-CMD ["poetry", "run", "prefect", "server", "start"] 
+CMD ["poetry", "run", "prefect", "server", "start", "--host", "0.0.0.0", "--port", "4200"] 
