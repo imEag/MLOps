@@ -54,10 +54,10 @@ poetry run python src/flows/training_flow.py
 ```
 
 2. Access MLflow UI:
-- Open http://localhost:${MLFLOW_PORT:-5000} in your browser
+- Open http://localhost:5000 (or the port you have in the .env file) in your browser
 
 3. Access Prefect UI:
-- Open http://localhost:${PREFECT_PORT:-4200} in your browser
+- Open http://localhost:4200 (or the port you have in the .env file) in your browser
 
 ## Development
 
