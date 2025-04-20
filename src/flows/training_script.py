@@ -56,7 +56,7 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
             modelos1 = {}
             acc_per_feature1 = []
             std_per_feature1 = []
-            print(f'sujetos (data1): {data1.shape[0]} | características (data1): {data1.shape[1]}')
+            print(f'Info: Initial dataset shape (data1): {data1.shape[0]} samples | {data1.shape[1]} features')
 
             # Log dataset info
             mlflow.log_param("n_samples", data1.shape[0])
@@ -64,7 +64,7 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
 
             # Preprocesamiento y análisis exploratorio de datos para data1
             for group in data1['group'].unique():
-                print('{} : {}'.format(group, (data1['group'] == group).sum()))
+                # print('{} : {}'.format(group, (data1['group'] == group).sum())) # Redundant - logged below
                 mlflow.log_metric(f"n_samples_{group}", (data1['group'] == group).sum())
 
             # Asegúrate de que la carpeta de destino exista para data1
@@ -80,25 +80,25 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
             for column in data1.columns:
                 if data1[column].isna().sum() != 0:
                     col_del1[column] = [data1[column].isna().sum()]
-                    print('{} : {}'.format(column, (data1[column].isna().sum())))
+                    # print('{} : {}'.format(column, (data1[column].isna().sum()))) # Debugging print
                     data1.drop(column, axis=1, inplace=True)
 
             # Se mapean las clases para data1
             clases_mapeadas1 = {label: idx for idx, label in enumerate(np.unique(data1['group']))}
             data1.loc[:, 'group'] = data1.loc[:, 'group'].map(clases_mapeadas1)
-            print(clases_mapeadas1)
+            # print(clases_mapeadas1) # Redundant - logged below
             mlflow.log_param("class_mapping", str(clases_mapeadas1))
 
             # Se elimina la columna, para ponerla al final para data1
             target1 = data1.pop('group')
             data1.insert(len(data1.columns), target1.name, target1)
             data1['group'] = pd.to_numeric(data1['group'])
-            print(data1.dtypes.unique())
+            # print(data1.dtypes.unique()) # Debugging print
             data1.select_dtypes('O')
             data1.groupby(by='sex').describe().T
             sexo_mapeado1 = {label: idx for idx, label in enumerate(np.unique(data1['sex']))}
             data1.loc[:, 'sex'] = data1.loc[:, 'sex'].map(sexo_mapeado1)
-            print(sexo_mapeado1)
+            # print(sexo_mapeado1) # Redundant - logged below
             mlflow.log_param("sex_mapping", str(sexo_mapeado1))
 
             # data1 pasa a ser el arreglo únicamente con los datos númericos
@@ -110,8 +110,8 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
 
             X1 = data1.values[:, :-1]  # La ultima posicion es el grupo, por eso se elimina
             y1 = data1.values[:, -1]
-            print(X1.shape)
-            print(y1.shape)
+            print(f'Data Shape: X1 (features) shape: {X1.shape}')
+            print(f'Data Shape: y1 (target) shape: {y1.shape}')
 
             TEST_SIZE=0.2 # Test de 20%
             RANDOM_STATE=1 # Semilla
@@ -156,7 +156,7 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
             predicted1 = GS_fitted1.predict(X_test1)
             predicted_proba = GS_fitted1.predict_proba(X_test1)[:, 1]  # Probabilidades de la clase positiva
             print(
-                f"Classification report for classifier {GS_fitted1}:\n"
+                f"Results: Classification report for classifier {GS_fitted1}:\n"
                 f"{metrics.classification_report(y_test1, predicted1)}\n"
             )
             dataframe_metrics1 = metrics.classification_report(y_test1, predicted1, output_dict=True)
@@ -168,9 +168,8 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
                 cv=10,
                 n_jobs=-1
             )
-            print('CV accuracy scores: %s' % scores1)
-            print('\nCV accuracy: %.3f +/- %.3f' %
-                  (np.mean(scores1), np.std(scores1)))
+            print('CV Results: Accuracy scores: %s' % scores1)
+            print('CV Results: Mean Accuracy: %.3f +/- %.3f' % (np.mean(scores1), np.std(scores1)))
 
             # Log cross-validation metrics
             mlflow.log_metric("cv_mean_accuracy", float(np.mean(scores1)))
@@ -215,8 +214,8 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
 
             X1 = data1.values[:, :-1]  # La ultima posicion es el grupo, por eso se elimina
             y1 = data1.values[:, -1]
-            print(X1.shape)
-            print(y1.shape)
+            print(f'Data Shape (Fine-tuning): X1 shape: {X1.shape}')
+            print(f'Data Shape (Fine-tuning): y1 shape: {y1.shape}')
 
             TEST_SIZE=0.2 # Test de 20%
             RANDOM_STATE=1 # Semilla
@@ -237,7 +236,7 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
             model.fit(X_train1, y_train1)
             predicted1 = model.predict(X_test1)
             print(
-                f"Classification report for classifier {model}:\n"
+                f"Results (Fine-tuning): Classification report for classifier {model}:\n"
                 f"{metrics.classification_report(y_test1, predicted1)}\n"
             )
             dataframe_metrics1 = metrics.classification_report(y_test1, predicted1, output_dict=True)
@@ -249,8 +248,8 @@ def exec1(neuro, name, space, path_save, path_plot, data1, var1, class_names, mo
                 cv=10,
                 n_jobs=-1
             )
-            print('CV accuracy scores: %s' % scores1)
-            print('\nCV accuracy: %.3f +/- %.3f' %
+            print('CV Results (Fine-tuning): Accuracy scores: %s' % scores1)
+            print('CV Results (Fine-tuning): Mean Accuracy: %.3f +/- %.3f' %
                   (np.mean(scores1), np.std(scores1)))
 
             # Log fine-tuning metrics
@@ -272,18 +271,21 @@ def exec2(acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clase
             X_test = X_train1
             y_test = y_train1
             band = 1
+            print("Info: Evaluating on TRAINING data as no test data was provided.")
+        else:
+             print("Info: Evaluating on provided TEST data.")
 
-        print(acc1[-1])
-        print(std1[-1])
+        # print(acc1[-1]) # Assuming acc1 might be a list from learning curve, let's rely on logged final metrics
+        # print(std1[-1]) # Assuming std1 might be a list from learning curve, let's rely on logged final metrics
 
         # Verifica los datos de entrada
-        print("Datos de entrenamiento (X_train1):", X_train1.shape)
-        print("Etiquetas de entrenamiento (y_train1):", np.unique(y_train1, return_counts=True))
-        print("Datos de prueba (X_test1):", X_test.shape)
-        print("Etiquetas de prueba (y_test1):", np.unique(y_test, return_counts=True))
+        print("Data Shape (Evaluation): Training X shape:", X_train1.shape)
+        print("Data Info (Evaluation): Training y labels:", np.unique(y_train1, return_counts=True))
+        print("Data Shape (Evaluation): Test X shape:", X_test.shape)
+        print("Data Info (Evaluation): Test y labels:", np.unique(y_test, return_counts=True))
 
         # Verifica el mapeo de las clases
-        print("Mapeo de clases:", clases_mapeadas1)
+        print("Info: Class mapping:", clases_mapeadas1)
 
         # Aplicar selección de características a X_test1
         X_test_selected = X_test[:, input_best_index1]
@@ -308,14 +310,14 @@ def exec2(acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clase
         print("Precision:", precision)
         print("Recall:", recall)
         print("F1 Score:", f1)
-
+        print("AUC:", auc2)
         # Log final metrics
         mlflow.log_metric("final_precision", float(precision))
         mlflow.log_metric("final_recall", float(recall))
         mlflow.log_metric("final_f1", float(f1))
         mlflow.log_metric("final_auc", float(auc2))
 
-        print(f'Precision: {precision}\nRecall: {recall}\nF1: {f1}\nAUC: {auc2}')
+        # print(f'Precision: {precision}\nRecall: {recall}\nF1: {f1}\nAUC: {auc2}') # Combined print above is better
 
         # Guardar métricas en un archivo CSV
         metrics_dict = {
@@ -335,8 +337,8 @@ def exec2(acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clase
         dataframe_metrics2 = pd.DataFrame(dataframe_metrics2).T
 
         # Verifica las predicciones y etiquetas reales
-        print("Predicciones:", predicted1)
-        print("Etiquetas reales:", y_test)
+        # print("Predicciones:", predicted1) # Too verbose for standard runs
+        # print("Etiquetas reales:", y_test) # Too verbose for standard runs
 
         cm_test1 = confusion_matrix(y_test, classes_x1)
         plot_confusion_matrix(path_plot, var1, cm_test1, classes=CLASS_NAMES, title='Confusion matrix')
@@ -397,6 +399,10 @@ PATH_PLOT = os.path.join(PATH_SAVE, 'graphics', 'ML', NEURO, f'{NAME}_{STR_RATIO
 data = pd.read_feather(DATA_FILE_PATH)
 data['group'] = data['group'].replace({'G1': 'ACr', 'Control': 'HC'})
 
-acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clases_mapeadas1, var1,predicted_proba, X_test1, y_test1 = exec1(NEURO, NAME, SPACE, PATH_SAVE, PATH_PLOT, data, STR_RATIO, CLASS_NAMES, model=None)
+acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clases_mapeadas1, var1,predicted_proba, X_test1, y_test1 = exec1(
+  NEURO, NAME, SPACE, PATH_SAVE, PATH_PLOT, data, STR_RATIO, CLASS_NAMES, model=None
+)
 
-fbest_model1 = exec2(acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clases_mapeadas1, PATH_PLOT, var1, predicted_proba, X_test1, y_test1)
+fbest_model1 = exec2(
+  acc1, std1, fbest_model1, input_best_index1, X_train1, y_train1, clases_mapeadas1, PATH_PLOT, var1, predicted_proba, X_test1, y_test1
+  )
