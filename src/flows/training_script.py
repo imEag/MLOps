@@ -14,6 +14,16 @@ import mlflow
 from mlflow.tracking import MlflowClient
 from datetime import datetime
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set MLflow tracking URI using environment variable for the port
+mlflow_port = os.getenv('MLFLOW_PORT', '5000') # Default to 5000 if not set
+mlflow.set_tracking_uri(f"http://localhost:{mlflow_port}")
+
 TIME_NOW = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 # TODO: Convert this script to a prefect flow
@@ -378,7 +388,8 @@ SPACE = 'ic';
 ICA = '58x25';
 RATIO = 79;
 STR_RATIO = '2to1'
-PROJECT_PATH = '/app'  # Path inside the Docker container
+#PROJECT_PATH = '/app'  # Path inside the Docker container
+PROJECT_PATH = '/Users/imeag/Documents/udea/trabajoDeGrado/MLOps'
 DATA_FILE_PATH = os.path.join(PROJECT_PATH, 'data', 'processed', f'Data_integration_ic_{NEURO}_{NAME}.feather')
 PATH = os.path.join(PROJECT_PATH, 'Experimenting')
 PATH_SAVE = os.path.join(PATH, 'Results', TIME_NOW)
