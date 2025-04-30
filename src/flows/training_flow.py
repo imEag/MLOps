@@ -73,22 +73,17 @@ def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str,
 
 # --- Prefect Flow ---
 @flow(name="ML Training Pipeline")
-def ml_pipeline_flow(load_data_func: SkipValidation[Callable], load_args: tuple = None, load_kwargs: dict = None):
+def ml_pipeline_flow(load_data_func: SkipValidation[Callable], load_args: tuple, load_kwargs: dict):
     """
     Prefect flow orchestrating the ML pipeline steps.
 
     Args:
         load_data_func (Callable): The function to use for loading data.
-        load_args (tuple, optional): Positional arguments for the load function. Defaults to None.
-        load_kwargs (dict, optional): Keyword arguments for the load function. Defaults to None.
+        load_args (tuple): Positional arguments for the load function.
+        load_kwargs (dict): Keyword arguments for the load function.
     """
     logger = get_run_logger()
-    if load_args is None:
-        load_args = ()
-    if load_kwargs is None:
-        load_kwargs = {}
 
-    # if theres a running run, end it
     if mlflow.active_run():
         print("🚩 Ending active run")
         mlflow.end_run()
