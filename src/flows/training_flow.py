@@ -11,7 +11,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from prefect import task, flow, get_run_logger # Import Prefect components
 from pydantic import SkipValidation # Import SkipValidation
-from typing import Callable # Import Callable
+from typing import Callable, Tuple # Import Callable and Tuple
+from pandas import Series # Import Series for type hinting
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,11 +43,10 @@ def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str,
         Exception: Propagates exceptions from the load_data_func.
     """
     logger = get_run_logger()
-    logger.info("--- Loading Data Task --- Received parent run_id: %s", parent_run_id)
+    logger.info("--- Loading Data Task ---")
 
     with mlflow.start_run(run_id=parent_run_id):
         with mlflow.start_run(run_name="Load Data Task", nested=True):
-            logger.info("--- Starting Nested Run for Load Data Task ---")
             try:
                 mlflow.log_param("task_name", "Load Data")
                 mlflow.log_param("loader_function_task", getattr(load_data_func, '__name__', repr(load_data_func)))
@@ -70,17 +70,71 @@ def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str,
                 mlflow.log_param("data_loading_error", str(e))
                 raise # Re-raise the exception for Prefect to handle
 
+@task(name="Process Data")
+def process_data_task(process_data_func: SkipValidation[Callable], data: pd.DataFrame, parent_run_id: str, *args, **kwargs):
+    """
+    Prefect task to process data using a provided function.
+
+    Args:
+        process_data_func (Callable): The function to execute for processing. It must accept a pandas DataFrame as input (first argument) and return a pandas DataFrame as output.
+        data (pd.DataFrame): The data to process.
+        parent_run_id (str): The run_id of the parent MLflow run (from the flow).
+        *args: Positional arguments for the process_data_func.
+        **kwargs: Keyword arguments for the process_data_func.
+
+    Returns: pd.DataFrame: The processed data.
+        
+    Raises:
+        TypeError: If the process_data_func does not return a pandas DataFrame.
+        Exception: Propagates exceptions from the process_data_func.
+    """
+    logger = get_run_logger()
+    logger.info("--- Processing Data Task ---")
+    
+    with mlflow.start_run(run_id=parent_run_id):
+        with mlflow.start_run(run_name="Process Data Task", nested=True):
+            try:
+              mlflow.log_param("task_name", "Process Data")
+              mlflow.log_param("processor_function_task", getattr(process_data_func, '__name__', repr(process_data_func)))
+
+              processed_data = process_data_func(data, *args, **kwargs)
+              
+              if not isinstance(processed_data, pd.DataFrame):
+                raise TypeError("The process_data_func must return a pandas DataFrame.")
+
+              logger.info(f"Data processed successfully.")
+              mlflow.log_param("num_samples_processed", processed_data.shape[0])
+              mlflow.log_param("num_features_processed", processed_data.shape[1])
+              mlflow.log_param("data_processing_status", "success")
+
+              logger.info("--- Data Processing Task Complete --- Nested Run Finished ---")
+              return processed_data
+
+            except Exception as e:
+                mlflow.log_param("data_processing_status", "failed")
+                mlflow.log_param("data_processing_error", str(e))
+                raise # Re-raise the exception for Prefect to handle
 
 # --- Prefect Flow ---
 @flow(name="ML Training Pipeline")
-def ml_pipeline_flow(load_data_func: SkipValidation[Callable], load_args: tuple, load_kwargs: dict):
+def ml_pipeline_flow(
+    load_data_func: SkipValidation[Callable],
+    load_data_args: tuple,
+    load_data_kwargs: dict,
+    process_data_func: SkipValidation[Callable],
+    process_data_args: tuple,
+    process_data_kwargs: dict
+    ):
     """
     Prefect flow orchestrating the ML pipeline steps.
 
     Args:
         load_data_func (Callable): The function to use for loading data.
-        load_args (tuple): Positional arguments for the load function.
-        load_kwargs (dict): Keyword arguments for the load function.
+        load_data_args (tuple): Positional arguments for the load function.
+        load_data_kwargs (dict): Keyword arguments for the load function.
+        process_data_func (Callable): The function to use for processing the data.
+        process_data_args (tuple): Positional arguments for the process function.
+        process_data_kwargs (dict): Keyword arguments for the process function.
     """
     logger = get_run_logger()
 
@@ -102,19 +156,27 @@ def ml_pipeline_flow(load_data_func: SkipValidation[Callable], load_args: tuple,
 
         mlflow.log_param("prefect_flow_name", f"ML Training Pipeline - {TIME_NOW}")
         mlflow.log_param("mlflow_tracking_uri", MLFLOW_TRACKING_URI)
+        
+        # Log the load data functions and their arguments
         mlflow.log_param("loader_function", getattr(load_data_func, '__name__', repr(load_data_func)))
-        if load_args:
-             mlflow.log_param("load_data_args", str(load_args))
-        if load_kwargs:
-             mlflow.log_param("load_data_kwargs", str(load_kwargs))
+        if load_data_args:
+             mlflow.log_param("load_data_args", str(load_data_args))
+        if load_data_kwargs:
+             mlflow.log_param("load_data_kwargs", str(load_data_kwargs))
+             
+        # Log the process data functions and their arguments
+        mlflow.log_param("processor_function", getattr(process_data_func, '__name__', repr(process_data_func)))
+        if process_data_args:
+             mlflow.log_param("process_data_args", str(process_data_args))
+        if process_data_kwargs:
+             mlflow.log_param("process_data_kwargs", str(process_data_kwargs))
 
         logger.info("--- Starting Prefect ML Pipeline Flow --- parent run_id: %s", parent_run_id)
 
         # --- Execute tasks ---
-        raw_data = load_data_task.submit(load_data_func, parent_run_id, *load_args, **load_kwargs)
+        raw_data = load_data_task.submit(load_data_func, parent_run_id, *load_data_args, **load_data_kwargs)
         
-        # Wait for raw_data before proceeding (if using .submit)
-        #processed_data = process_data_task.submit(raw_data)
+        processed_data = process_data_task.submit(process_data_func, raw_data, parent_run_id, *process_data_args, **process_data_kwargs)
 
         #model = train_model_task.submit(processed_data)
 

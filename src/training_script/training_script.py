@@ -29,3 +29,8 @@ def load_data():
     """Loads data from feather file and logs initial info."""
     data = pd.read_feather(DATA_FILE_PATH)
     return data
+  
+def process_data(data):
+    """Processes data and splits it into training and testing sets."""
+    print('Processing data...', data)
+    return data

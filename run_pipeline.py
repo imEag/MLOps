@@ -9,12 +9,18 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from src.flows.training_flow import ml_pipeline_flow
-from src.training_script.training_script import load_data
+from src.training_script.training_script import load_data, process_data
 
 if __name__ == "__main__":
     print("Starting the ML training pipeline flow...")
     # Run the Prefect flow, passing the load_data function
     # from training_script.py as the data loading mechanism.
-    flow_state = ml_pipeline_flow(load_data_func=load_data, load_args=(), load_kwargs={})
+    flow_state = ml_pipeline_flow(
+      load_data_func=load_data, 
+      load_data_args=(), 
+      load_data_kwargs={}, 
+      process_data_func=process_data, 
+      process_data_args=(), 
+      process_data_kwargs={})
     print("ML training pipeline flow finished.")
     print(f"Final flow state: {flow_state}") # Optional: Print the final state for debugging 
