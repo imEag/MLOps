@@ -18,7 +18,7 @@ if __name__ == "__main__":
     flow_state = ml_pipeline_flow(
       load_data_func=load_data, 
       load_data_args=(), 
-      load_data_kwargs={}, 
+      load_data_kwargs={},
       process_data_func=process_data, 
       process_data_args=(), 
       process_data_kwargs={})

@@ -99,6 +99,9 @@ def mapa_de_correlacion(data, path_plot,var):
     sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', center=0, annot_kws={"size": 5}, cbar=True)
     plt.title(f"Correlation Matrix for {var} Ratio",fontsize=20)
     plt.tight_layout()
+    # Ensure the directory exists before saving
+    if not os.path.exists(path_plot):
+        os.makedirs(path_plot, exist_ok=True)
     plt.savefig(os.path.join(path_plot, 'correlation_before.png'))
     plt.close()
 
