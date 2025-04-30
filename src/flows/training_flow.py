@@ -10,6 +10,8 @@ from mlflow.tracking import MlflowClient
 from datetime import datetime
 from dotenv import load_dotenv
 from prefect import task, flow, get_run_logger # Import Prefect components
+from pydantic import SkipValidation # Import SkipValidation
+from typing import Callable # Import Callable
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,12 +24,12 @@ TIME_NOW = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 # --- Prefect Tasks ---
 @task(name="Load Data")
-def load_data_task(load_data_func: callable, parent_run_id: str, *args, **kwargs):
+def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str, *args, **kwargs):
     """
     Prefect task to load data using a provided function.
 
     Args:
-        load_data_func (callable): The function to execute for loading data.
+        load_data_func (Callable): The function to execute for loading data.
         parent_run_id (str): The run_id of the parent MLflow run (from the flow).
         *args: Positional arguments for the load_data_func.
         **kwargs: Keyword arguments for the load_data_func.
@@ -71,12 +73,12 @@ def load_data_task(load_data_func: callable, parent_run_id: str, *args, **kwargs
 
 # --- Prefect Flow ---
 @flow(name="ML Training Pipeline")
-def ml_pipeline_flow(load_data_func: callable, load_args: tuple = None, load_kwargs: dict = None):
+def ml_pipeline_flow(load_data_func: SkipValidation[Callable], load_args: tuple = None, load_kwargs: dict = None):
     """
     Prefect flow orchestrating the ML pipeline steps.
 
     Args:
-        load_data_func (callable): The function to use for loading data.
+        load_data_func (Callable): The function to use for loading data.
         load_args (tuple, optional): Positional arguments for the load function. Defaults to None.
         load_kwargs (dict, optional): Keyword arguments for the load function. Defaults to None.
     """
