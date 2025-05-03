@@ -9,7 +9,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from src.flows.training_flow import ml_pipeline_flow
-from src.training_script.training_script import load_data, process_data
+from src.training_script.training_script import load_data, process_data, train_model
 
 if __name__ == "__main__":
     print("Starting the ML training pipeline flow...")
@@ -21,6 +21,9 @@ if __name__ == "__main__":
       load_data_kwargs={},
       process_data_func=process_data, 
       process_data_args=(), 
-      process_data_kwargs={})
+      process_data_kwargs={},
+      train_model_func=train_model,
+      train_model_args=(),
+      train_model_kwargs={})
     print("ML training pipeline flow finished.")
     print(f"Final flow state: {flow_state}") # Optional: Print the final state for debugging 

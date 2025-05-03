@@ -29,6 +29,10 @@ DATA_FILE_PATH = os.path.join(PROJECT_PATH, 'data', 'processed', f'Data_integrat
 PATH_SAVE_BASE = os.path.join(PROJECT_PATH, 'Experimenting', 'Results', TIME_NOW)
 PATH_SAVE_CORRELATION_MAP = os.path.join(PATH_SAVE_BASE, 'correlation_map')
 
+modelos1 = {}
+acc_per_feature1 = []
+std_per_feature1 = []
+
 def load_data():
     """Loads data from feather file and logs initial info."""
     data = pd.read_feather(DATA_FILE_PATH)
@@ -68,3 +72,53 @@ def process_data(data):
     data = mapa_de_correlacion(data, PATH_SAVE_CORRELATION_MAP, STR_RATIO)
 
     return data
+  
+def train_model(data):
+  X1 = data.values[:, :-1]  # La ultima posicion es el grupo, por eso se elimina
+  y1 = data.values[:, -1]
+  print(f'Data Shape: X1 (features) shape: {X1.shape}')
+  print(f'Data Shape: y1 (target) shape: {y1.shape}')
+
+  TEST_SIZE=0.2 # Test de 20%
+  RANDOM_STATE=1 # Semilla
+  X_train1, X_test1, y_train1, y_test1 = train_test_split(
+      X1,
+      y1,
+      test_size=TEST_SIZE,
+      random_state=RANDOM_STATE,
+      stratify=data.values[:, -1])
+  
+  # Log split info
+  #mlflow.log_param("test_size", TEST_SIZE)
+  #mlflow.log_param("random_state", RANDOM_STATE)
+  #mlflow.log_param("n_train_samples", X_train1.shape[0])
+  #mlflow.log_param("n_test_samples", X_test1.shape[0])
+  
+  random_grid1 = grid_search()
+  rf_random1 = randomFo(random_grid1, X_train1, y_train1)
+  best_selected1 = rf_random1.best_estimator_
+  params1 = rf_random1.best_params_
+  
+  # Log best parameters
+  #for param, value in params1.items():
+      #mlflow.log_param(f"best_{param}", value)
+
+  # Guardar mejores características
+  feat1 = pd.DataFrame()
+  sorted_names1 = []
+  nombres_columnas1 = data.columns[:-1]
+  features_scores1 = best_selected1.feature_importances_
+  index1 = np.argsort(features_scores1)[::-1]
+  feat1 = primeras_carateristicas(X_train1, sorted_names1, nombres_columnas1, features_scores1, feat1, index1, PATH_SAVE_BASE, STR_RATIO)
+
+  # Log feature importance
+  #for i, (feature, importance) in enumerate(zip(nombres_columnas1, features_scores1)):
+      #mlflow.log_metric(f"feature_importance_{feature}", float(importance))
+
+  curva_de_aprendizaje(sorted_names1, data, best_selected1, X_train1, y_train1, modelos1, acc_per_feature1, std_per_feature1, PATH_SAVE_BASE, STR_RATIO)
+  
+  GS_fitted1 = best_selected1.fit(X_train1, y_train1)
+  modelos1['GridSerach'] = GS_fitted1
+  
+  #return the model trained
+  return GS_fitted1

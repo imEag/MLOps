@@ -13,6 +13,7 @@ from prefect import task, flow, get_run_logger # Import Prefect components
 from pydantic import SkipValidation # Import SkipValidation
 from typing import Callable, Tuple # Import Callable and Tuple
 from pandas import Series # Import Series for type hinting
+import mlflow.sklearn
 
 # Load environment variables from .env file
 load_dotenv()
@@ -115,6 +116,43 @@ def process_data_task(process_data_func: SkipValidation[Callable], data: pd.Data
                 mlflow.log_param("data_processing_error", str(e))
                 raise # Re-raise the exception for Prefect to handle
 
+@task(name="Train Model")
+def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFrame, parent_run_id: str, *args, **kwargs):
+    """
+    Prefect task to train a model using a provided function.
+
+    Args:
+        train_model_func (Callable): The function to use for training the model. It must accept a pandas DataFrame as input (first argument).
+        data (pd.DataFrame): The data to train the model on.
+        parent_run_id (str): The run_id of the parent MLflow run (from the flow).
+        *args: Positional arguments for the train_model_func.
+        **kwargs: Keyword arguments for the train_model_func.
+    """
+    
+    logger = get_run_logger()
+    logger.info("--- Training Model Task ---")
+    
+    with mlflow.start_run(run_id=parent_run_id):
+        with mlflow.start_run(run_name="Train Model Task", nested=True):
+            try:
+              mlflow.log_param("task_name", "Train Model")
+              mlflow.log_param("trainer_function_task", getattr(train_model_func, '__name__', repr(train_model_func)))
+
+              trained_model = train_model_func(data, *args, **kwargs)
+              print(f"Trained model: {trained_model}")
+              
+              mlflow.log_param("training_status", "success")
+              
+              mlflow.sklearn.log_model(trained_model, "model") # TODO: Fix the warning "2025/05/03 17:44:13 WARNING mlflow.models.model: Model logged without a signature and input example. Please set `input_example` parameter when logging the model to auto infer the model signature."
+
+              logger.info("--- Training Model Task Complete --- Nested Run Finished ---")
+              return trained_model
+
+            except Exception as e:
+                mlflow.log_param("training_status", "failed")
+                mlflow.log_param("training_error", str(e))
+                raise # Re-raise the exception for Prefect to handle
+
 # --- Prefect Flow ---
 @flow(name="ML Training Pipeline")
 def ml_pipeline_flow(
@@ -123,7 +161,10 @@ def ml_pipeline_flow(
     load_data_kwargs: dict,
     process_data_func: SkipValidation[Callable],
     process_data_args: tuple,
-    process_data_kwargs: dict
+    process_data_kwargs: dict,
+    train_model_func: SkipValidation[Callable],
+    train_model_args: tuple,
+    train_model_kwargs: dict
     ):
     """
     Prefect flow orchestrating the ML pipeline steps.
@@ -135,6 +176,9 @@ def ml_pipeline_flow(
         process_data_func (Callable): The function to use for processing the data.
         process_data_args (tuple): Positional arguments for the process function.
         process_data_kwargs (dict): Keyword arguments for the process function.
+        train_model_func (Callable): The function to use for training the model.
+        train_model_args (tuple): Positional arguments for the train function.
+        train_model_kwargs (dict): Keyword arguments for the train function.
     """
     logger = get_run_logger()
 
@@ -178,7 +222,7 @@ def ml_pipeline_flow(
         
         processed_data = process_data_task.submit(process_data_func, raw_data, parent_run_id, *process_data_args, **process_data_kwargs)
 
-        #model = train_model_task.submit(processed_data)
+        model = train_model_task.submit(train_model_func, processed_data, parent_run_id, *train_model_args, **train_model_kwargs)
 
         #validation_results = validate_model_task.submit(model, processed_data)
 
