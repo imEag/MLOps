@@ -120,5 +120,61 @@ def train_model(data):
   GS_fitted1 = best_selected1.fit(X_train1, y_train1)
   modelos1['GridSerach'] = GS_fitted1
   
-  #return the model trained
+  predicted1 = GS_fitted1.predict(X_test1)
+  predicted_proba = GS_fitted1.predict_proba(X_test1)[:, 1]  # Probabilidades de la clase positiva
+  print(
+      f"Results: Classification report for classifier {GS_fitted1}:\n"
+      f"{metrics.classification_report(y_test1, predicted1)}\n"
+  )
+  dataframe_metrics1 = metrics.classification_report(y_test1, predicted1, output_dict=True)
+  dataframe_metrics1 = pd.DataFrame(dataframe_metrics1).T
+  scores1 = cross_val_score(
+      estimator=GS_fitted1,
+      X=X_train1,
+      y=y_train1,
+      cv=10,
+      n_jobs=-1
+  )
+  print('CV Results: Accuracy scores: %s' % scores1)
+  print('CV Results: Mean Accuracy: %.3f +/- %.3f' % (np.mean(scores1), np.std(scores1)))
+
+  # Log cross-validation metrics
+  #mlflow.log_metric("cv_mean_accuracy", float(np.mean(scores1)))
+  #mlflow.log_metric("cv_std_accuracy", float(np.std(scores1)))
+
+  acc_per_feature1.append(np.mean(scores1))
+  std_per_feature1.append(np.std(scores1))
+
+  pos_model1 = np.argsort(acc_per_feature1)[-1]
+  best_model1 = list(modelos1.keys())[pos_model1]
+  best_features1 = sorted_names1[:pos_model1]
+  mi_path1 = os.path.join(PATH_SAVE_BASE, 'best_params1.txt')
+  with open(mi_path1, 'w') as f:
+      for i in params1:
+          f.write(f"{i}\n")
+  
+  # Log best model info
+  #mlflow.log_param("best_model", best_model1)
+  #mlflow.log_param("n_best_features", len(best_features1))
+  
+  title = f'validation_GridSearch.png'
+  palette1 = ["#8AA6A3", "#127369"]
+
+  curva_validacion3(GS_fitted1, X_train1, y_train1, title, palette1, STR_RATIO)
+  plt.grid()
+  fig = plt.gcf()
+  fig.savefig(os.path.join(PATH_SAVE_BASE, title), bbox_inches='tight')
+  plt.close()
+
+  # Log artifacts
+  # mlflow.log_artifact(os.path.join(PATH_SAVE_BASE, title))
+  # mlflow.log_artifact(mi_path1)
+  # mlflow.log_artifact(path_excel1_1)
+  # mlflow.log_artifact(path_excel1_2)
+  # mlflow.log_artifact(path_excel1_3) #FIXME: this is causing an error
+
+  acc1, std1, fbest_model1, input_best_index1 = features_best3(best_features1, best_selected1, data.iloc[:, :-1], X_train1, y_train1, PATH_SAVE_BASE)
+  
+  # return the model trained
   return GS_fitted1
+  
