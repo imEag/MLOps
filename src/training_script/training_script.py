@@ -13,6 +13,16 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+# Define no-op loggers directly in this script
+def _noop(*args, **kwargs): pass
+
+noop_loggers = {
+    "log_param": _noop,
+    "log_metric": _noop,
+    "log_artifact": _noop,
+    "log_model": _noop, # Include log_model for completeness, though handled by flow
+}
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -33,14 +43,28 @@ modelos1 = {}
 acc_per_feature1 = []
 std_per_feature1 = []
 
-def load_data():
+def load_data(*args, **kwargs):
     """Loads data from feather file and logs initial info."""
+    # Get logger functions from kwargs, default to no-op if not provided
+    loggers = kwargs.get("mlflow_loggers", noop_loggers)
+    log_param = loggers.get("log_param", _noop)
+    log_metric = loggers.get("log_metric", _noop)
+    log_artifact = loggers.get("log_artifact", _noop)
+    
+    log_param("data_file_path", DATA_FILE_PATH)
     data = pd.read_feather(DATA_FILE_PATH)
+    # Example: Log parameters specific to loading if needed
+    # log_param("initial_rows", data.shape[0]) 
     return data
   
-def process_data(data):
+def process_data(data, *args, **kwargs):
     """Processes data and splits it into training and testing sets."""
-    
+    # Get logger functions from kwargs, default to no-op if not provided
+    loggers = kwargs.get("mlflow_loggers", noop_loggers)
+    log_param = loggers.get("log_param", _noop)
+    log_metric = loggers.get("log_metric", _noop)
+    log_artifact = loggers.get("log_artifact", _noop)
+
     # Eliminación de columnas con datos faltantes para data
     col_del1 = pd.DataFrame()
     for column in data.columns:
@@ -51,7 +75,7 @@ def process_data(data):
     # Se mapean las clases para data
     clases_mapeadas1 = {label: idx for idx, label in enumerate(np.unique(data['group']))}
     data.loc[:, 'group'] = data.loc[:, 'group'].map(clases_mapeadas1)
-    #mlflow.log_param("class_mapping", str(clases_mapeadas1))
+    log_param("class_mapping", str(clases_mapeadas1))
     
     # Se elimina la columna, para ponerla al final para data
     target1 = data.pop('group')
@@ -62,7 +86,7 @@ def process_data(data):
     data.groupby(by='sex').describe().T
     sexo_mapeado1 = {label: idx for idx, label in enumerate(np.unique(data['sex']))}
     data.loc[:, 'sex'] = data.loc[:, 'sex'].map(sexo_mapeado1)
-    #mlflow.log_param("sex_mapping", str(sexo_mapeado1))
+    log_param("sex_mapping", str(sexo_mapeado1))
     
     # data pasa a ser el arreglo únicamente con los datos númericos
     numerics1 = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
@@ -70,10 +94,19 @@ def process_data(data):
     data.shape
 
     data = mapa_de_correlacion(data, PATH_SAVE_CORRELATION_MAP, STR_RATIO)
+    # TODO: Log the correlation map artifact
 
     return data
   
-def train_model(data):
+def train_model(data, *args, **kwargs):
+  # Get logger functions from kwargs, default to no-op if not provided
+  loggers = kwargs.get("mlflow_loggers", noop_loggers)
+  log_param = loggers.get("log_param", _noop)
+  log_metric = loggers.get("log_metric", _noop)
+  log_artifact = loggers.get("log_artifact", _noop)
+  # log_model is handled by the flow task
+  # log_model = loggers.get("log_model", _noop) 
+
   X1 = data.values[:, :-1]  # La ultima posicion es el grupo, por eso se elimina
   y1 = data.values[:, -1]
   print(f'Data Shape: X1 (features) shape: {X1.shape}')
@@ -89,10 +122,10 @@ def train_model(data):
       stratify=data.values[:, -1])
   
   # Log split info
-  #mlflow.log_param("test_size", TEST_SIZE)
-  #mlflow.log_param("random_state", RANDOM_STATE)
-  #mlflow.log_param("n_train_samples", X_train1.shape[0])
-  #mlflow.log_param("n_test_samples", X_test1.shape[0])
+  log_param("test_size", TEST_SIZE)
+  log_param("random_state", RANDOM_STATE)
+  log_param("n_train_samples", X_train1.shape[0])
+  log_param("n_test_samples", X_test1.shape[0])
   
   random_grid1 = grid_search()
   rf_random1 = randomFo(random_grid1, X_train1, y_train1)
@@ -100,8 +133,8 @@ def train_model(data):
   params1 = rf_random1.best_params_
   
   # Log best parameters
-  #for param, value in params1.items():
-      #mlflow.log_param(f"best_{param}", value)
+  for param, value in params1.items():
+      log_param(f"best_{param}", value)
 
   # Guardar mejores características
   feat1 = pd.DataFrame()
@@ -139,8 +172,8 @@ def train_model(data):
   print('CV Results: Mean Accuracy: %.3f +/- %.3f' % (np.mean(scores1), np.std(scores1)))
 
   # Log cross-validation metrics
-  #mlflow.log_metric("cv_mean_accuracy", float(np.mean(scores1)))
-  #mlflow.log_metric("cv_std_accuracy", float(np.std(scores1)))
+  log_metric("cv_mean_accuracy", float(np.mean(scores1)))
+  log_metric("cv_std_accuracy", float(np.std(scores1)))
 
   acc_per_feature1.append(np.mean(scores1))
   std_per_feature1.append(np.std(scores1))
@@ -152,10 +185,11 @@ def train_model(data):
   with open(mi_path1, 'w') as f:
       for i in params1:
           f.write(f"{i}\n")
+  log_artifact(mi_path1, "parameters") # Log the saved parameters file
   
   # Log best model info
-  #mlflow.log_param("best_model", best_model1)
-  #mlflow.log_param("n_best_features", len(best_features1))
+  log_param("best_model_name", best_model1) # Changed key slightly for clarity
+  log_param("n_best_features", len(best_features1))
   
   title = f'validation_GridSearch.png'
   palette1 = ["#8AA6A3", "#127369"]

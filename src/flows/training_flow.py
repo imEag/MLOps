@@ -24,6 +24,17 @@ MLFLOW_TRACKING_URI = f"http://localhost:{MLFLOW_PORT}"
 
 TIME_NOW = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+# --- Helper for Logging ---
+# Define no-op loggers for when functions are called outside the flow context
+def _noop(*args, **kwargs): pass
+
+noop_loggers = {
+    "log_param": _noop,
+    "log_metric": _noop,
+    "log_artifact": _noop,
+    "log_model": _noop,
+}
+
 # --- Prefect Tasks ---
 @task(name="Load Data")
 def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str, *args, **kwargs):
@@ -47,12 +58,21 @@ def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str,
     logger.info("--- Loading Data Task ---")
 
     with mlflow.start_run(run_id=parent_run_id):
-        with mlflow.start_run(run_name="Load Data Task", nested=True):
+        with mlflow.start_run(run_name="Load Data Task", nested=True) as nested_run:
             try:
+                # Define loggers specific to this nested run
+                task_loggers = {
+                    "log_param": mlflow.log_param,
+                    "log_metric": mlflow.log_metric,
+                    "log_artifact": mlflow.log_artifact,
+                    # Add log_model if needed for this task, typically not
+                }
+
                 mlflow.log_param("task_name", "Load Data")
                 mlflow.log_param("loader_function_task", getattr(load_data_func, '__name__', repr(load_data_func)))
 
-                data = load_data_func(*args, **kwargs)
+                # Pass loggers to the user function
+                data = load_data_func(*args, **kwargs, mlflow_loggers=task_loggers)
 
                 if not isinstance(data, pd.DataFrame):
                     raise TypeError("The load_data_func must return a pandas DataFrame.")
@@ -93,13 +113,22 @@ def process_data_task(process_data_func: SkipValidation[Callable], data: pd.Data
     logger.info("--- Processing Data Task ---")
     
     with mlflow.start_run(run_id=parent_run_id):
-        with mlflow.start_run(run_name="Process Data Task", nested=True):
+        with mlflow.start_run(run_name="Process Data Task", nested=True) as nested_run:
             try:
+              # Define loggers specific to this nested run
+              task_loggers = {
+                  "log_param": mlflow.log_param,
+                  "log_metric": mlflow.log_metric,
+                  "log_artifact": mlflow.log_artifact,
+                  # Add log_model if needed for this task
+              }
+
               mlflow.log_param("task_name", "Process Data")
               mlflow.log_param("processor_function_task", getattr(process_data_func, '__name__', repr(process_data_func)))
 
-              processed_data = process_data_func(data, *args, **kwargs)
-              
+              # Pass loggers to the user function
+              processed_data = process_data_func(data, *args, **kwargs, mlflow_loggers=task_loggers)
+
               if not isinstance(processed_data, pd.DataFrame):
                 raise TypeError("The process_data_func must return a pandas DataFrame.")
 
@@ -133,23 +162,36 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
     logger.info("--- Training Model Task ---")
     
     with mlflow.start_run(run_id=parent_run_id):
-        with mlflow.start_run(run_name="Train Model Task", nested=True):
+        with mlflow.start_run(run_name="Train Model Task", nested=True) as nested_run:
             try:
+              # Define loggers specific to this nested run
+              task_loggers = {
+                  "log_param": mlflow.log_param,
+                  "log_metric": mlflow.log_metric,
+                  "log_artifact": mlflow.log_artifact,
+                  "log_model": mlflow.sklearn.log_model, # Use the sklearn flavor
+              }
+
               mlflow.log_param("task_name", "Train Model")
               mlflow.log_param("trainer_function_task", getattr(train_model_func, '__name__', repr(train_model_func)))
 
-              trained_model = train_model_func(data, *args, **kwargs)
+              # Pass loggers to the user function
+              trained_model = train_model_func(data, *args, **kwargs, mlflow_loggers=task_loggers)
               print(f"Trained model: {trained_model}")
-              
+
               mlflow.log_param("training_status", "success")
-              
+
+              # Example logging of the model itself (moved from training script)
               input_example = data.head() if isinstance(data, pd.DataFrame) else data[:5]
-              
-              mlflow.sklearn.log_model(
-                  trained_model, 
-                  "model",
-                  input_example=input_example
-              )
+              if trained_model: # Check if a model was returned
+                  task_loggers["log_model"](
+                      trained_model,
+                      "model", # Default artifact path
+                      input_example=input_example
+                  )
+              else:
+                   logger.warning("Training function did not return a model to log.")
+
 
               logger.info("--- Training Model Task Complete --- Nested Run Finished ---")
               return trained_model
