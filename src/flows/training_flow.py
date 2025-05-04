@@ -143,7 +143,13 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
               
               mlflow.log_param("training_status", "success")
               
-              mlflow.sklearn.log_model(trained_model, "model") # TODO: Fix the warning "2025/05/03 17:44:13 WARNING mlflow.models.model: Model logged without a signature and input example. Please set `input_example` parameter when logging the model to auto infer the model signature."
+              input_example = data.head() if isinstance(data, pd.DataFrame) else data[:5]
+              
+              mlflow.sklearn.log_model(
+                  trained_model, 
+                  "model",
+                  input_example=input_example
+              )
 
               logger.info("--- Training Model Task Complete --- Nested Run Finished ---")
               return trained_model
