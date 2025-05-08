@@ -227,7 +227,9 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
               
               logger.info(f"Successfully logged validated metrics: {mandatory_metrics}")
 
-              input_example = data.head() if isinstance(data, pd.DataFrame) else data[:5]
+              # Set the input example for the model
+              input_example = data.iloc[:, :-1].head()
+
               if trained_model: 
                   task_loggers["log_model"](
                       trained_model,
