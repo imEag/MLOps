@@ -99,6 +99,9 @@ def mapa_de_correlacion(data, path_plot,var):
     sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', center=0, annot_kws={"size": 5}, cbar=True)
     plt.title(f"Correlation Matrix for {var} Ratio",fontsize=20)
     plt.tight_layout()
+    # Ensure the directory exists before saving
+    if not os.path.exists(path_plot):
+        os.makedirs(path_plot, exist_ok=True)
     plt.savefig(os.path.join(path_plot, 'correlation_before.png'))
     plt.close()
 
@@ -460,7 +463,7 @@ def primeras_carateristicas(X_train, sorted_names,nombres_columnas,features_scor
     plt.xlim([-1, 10])
 
     plt.tight_layout()
-    plt.savefig(path_plot+'/'+'features_table_plot_all.png')
+    plt.savefig(os.path.join(path_plot, 'features_table_plot_all.png'))
     plt.close()
     return feat
 
@@ -541,7 +544,7 @@ def curva_de_aprendizaje(sorted_names,data,best_selected,X_train,y_train,modelos
     plt.title('Learning Curve Decision Tree'+' '+var)
     plt.xlabel('Number of features')
     plt.ylabel('Accuracy')
-    plt.savefig(path_plot+'/'+'features_plot_all.png')
+    plt.savefig(os.path.join(path_plot, 'features_plot_all.png'))
     plt.close()
 
 
