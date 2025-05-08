@@ -149,13 +149,32 @@ def process_data_task(process_data_func: SkipValidation[Callable], data: pd.Data
 def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFrame, parent_run_id: str, *args, **kwargs):
     """
     Prefect task to train a model using a provided function.
+    The training function IS REQUIRED to return a tuple: (trained_model, metrics_dict).
+    
+    The metrics_dict MUST contain the following keys with their corresponding float values:
+    - 'accuracy'
+    - 'macro_avg_precision'
+    - 'macro_avg_recall'
+    - 'macro_avg_f1_score'
+    - 'weighted_avg_precision'
+    - 'weighted_avg_recall'
+    - 'weighted_avg_f1_score'
 
     Args:
-        train_model_func (Callable): The function to use for training the model. It must accept a pandas DataFrame as input (first argument).
+        train_model_func (Callable): The function to use for training the model. 
+                                     It must accept a pandas DataFrame as input (first argument)
+                                     and return a tuple (trained_model, metrics_dict as specified above).
         data (pd.DataFrame): The data to train the model on.
         parent_run_id (str): The run_id of the parent MLflow run (from the flow).
         *args: Positional arguments for the train_model_func.
         **kwargs: Keyword arguments for the train_model_func.
+
+    Returns:
+        Tuple[Any, dict]: A tuple containing the trained model and the validated dictionary of metrics.
+    
+    Raises:
+        ValueError: If metrics_dict is not returned, is not a dictionary, or is missing any of the required metric keys.
+        TypeError: If train_model_func does not return a tuple of length 2.
     """
     
     logger = get_run_logger()
@@ -164,7 +183,6 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
     with mlflow.start_run(run_id=parent_run_id):
         with mlflow.start_run(run_name="Train Model Task", nested=True) as nested_run:
             try:
-              # Define loggers specific to this nested run
               task_loggers = {
                   "log_param": mlflow.log_param,
                   "log_metric": mlflow.log_metric,
@@ -176,25 +194,51 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
               mlflow.log_param("trainer_function_task", getattr(train_model_func, '__name__', repr(train_model_func)))
 
               # Pass loggers to the user function
-              trained_model = train_model_func(data, *args, **kwargs, mlflow_loggers=task_loggers)
+              result = train_model_func(data, *args, **kwargs, mlflow_loggers=task_loggers)
+              
+              if not isinstance(result, tuple) or len(result) != 2:
+                  raise TypeError(f"The train_model_func is expected to return a tuple (model, metrics_dict), but got {type(result)}")
+              
+              trained_model, metrics_dict = result
+
               print(f"Trained model: {trained_model}")
+              print(f"Metrics received: {metrics_dict}")
 
               mlflow.log_param("training_status", "success")
 
-              # Example logging of the model itself (moved from training script)
+              mandatory_metrics = [
+                  'accuracy', 'macro_avg_precision', 'macro_avg_recall', 'macro_avg_f1_score',
+                  'weighted_avg_precision', 'weighted_avg_recall', 'weighted_avg_f1_score'
+              ]
+
+              if not isinstance(metrics_dict, dict):
+                  raise ValueError(f"Expected metrics_dict to be a dictionary, but got {type(metrics_dict)}")
+
+              missing_metrics = [key for key in mandatory_metrics if key not in metrics_dict]
+              if missing_metrics:
+                  raise ValueError(f"Missing required metrics in metrics_dict: {', '.join(missing_metrics)}")
+              
+              for metric_name in mandatory_metrics: 
+                  metric_value = metrics_dict[metric_name]
+                  if metric_value is not None:
+                      mlflow.log_metric(metric_name, float(metric_value)) 
+                  else:
+                      logger.warning(f"Metric '{metric_name}' has a None value. Logging as is or skipping if needed.")
+              
+              logger.info(f"Successfully logged validated metrics: {mandatory_metrics}")
+
               input_example = data.head() if isinstance(data, pd.DataFrame) else data[:5]
-              if trained_model: # Check if a model was returned
+              if trained_model: 
                   task_loggers["log_model"](
                       trained_model,
-                      "model", # Default artifact path
+                      "model",
                       input_example=input_example
                   )
               else:
                    logger.warning("Training function did not return a model to log.")
 
-
               logger.info("--- Training Model Task Complete --- Nested Run Finished ---")
-              return trained_model
+              return trained_model, metrics_dict
 
             except Exception as e:
                 mlflow.log_param("training_status", "failed")
@@ -270,11 +314,14 @@ def ml_pipeline_flow(
         
         processed_data = process_data_task.submit(process_data_func, raw_data, parent_run_id, *process_data_args, **process_data_kwargs)
 
-        model = train_model_task.submit(train_model_func, processed_data, parent_run_id, *train_model_args, **train_model_kwargs)
+        model_and_metrics_future = train_model_task.submit(train_model_func, processed_data, parent_run_id, *train_model_args, **train_model_kwargs)
 
         #validation_results = validate_model_task.submit(model, processed_data)
 
-        # You can retrieve results if needed, e.g., final_metrics = validation_results.result()
+        # You can retrieve results if needed:
+        # model, metrics = model_and_metrics_future.result()
+        # logger.info(f"Model: {model}")
+        # logger.info(f"Metrics from flow: {metrics}")
         #logger.info(f"Validation results (task future): {validation_results}")
 
 

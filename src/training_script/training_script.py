@@ -171,13 +171,42 @@ def train_model(data, *args, **kwargs):
   print('CV Results: Accuracy scores: %s' % scores1)
   print('CV Results: Mean Accuracy: %.3f +/- %.3f' % (np.mean(scores1), np.std(scores1)))
 
-  # Log cross-validation metrics
+  metrics_to_return = {
+      "accuracy": dataframe_metrics1.loc['accuracy', 'f1-score'],
+      "macro_avg_precision": dataframe_metrics1.loc['macro avg', 'precision'],
+      "macro_avg_recall": dataframe_metrics1.loc['macro avg', 'recall'],
+      "macro_avg_f1_score": dataframe_metrics1.loc['macro avg', 'f1-score'],
+      "weighted_avg_precision": dataframe_metrics1.loc['weighted avg', 'precision'],
+      "weighted_avg_recall": dataframe_metrics1.loc['weighted avg', 'recall'],
+      "weighted_avg_f1_score": dataframe_metrics1.loc['weighted avg', 'f1-score']
+  }
+
   log_metric("cv_mean_accuracy", float(np.mean(scores1)))
   log_metric("cv_std_accuracy", float(np.std(scores1)))
 
-  acc_per_feature1.append(np.mean(scores1))
-  std_per_feature1.append(np.std(scores1))
+  for idx_name, row_values in dataframe_metrics1.iterrows():
+      is_class_metric = False
+      class_idx_int = -1
+      try:
+          float_idx = float(idx_name)
+          if float_idx == int(float_idx):
+              is_class_metric = True
+              class_idx_int = int(float_idx)
+      except ValueError:
+          pass
 
+      if is_class_metric:
+          class_name_str = f"class_{class_idx_int}"
+          if class_idx_int < len(CLASS_NAMES):
+              class_name_str = CLASS_NAMES[class_idx_int]
+          
+          metric_key_base = f"{class_name_str}"
+          log_metric(f"{metric_key_base}_precision", float(row_values["precision"])) 
+          log_metric(f"{metric_key_base}_recall", float(row_values["recall"])) 
+          log_metric(f"{metric_key_base}_f1_score", float(row_values["f1-score"])) 
+          if pd.notna(row_values["support"]): 
+              log_metric(f"{metric_key_base}_support", int(row_values["support"])) 
+  
   pos_model1 = np.argsort(acc_per_feature1)[-1]
   best_model1 = list(modelos1.keys())[pos_model1]
   best_features1 = sorted_names1[:pos_model1]
@@ -185,10 +214,9 @@ def train_model(data, *args, **kwargs):
   with open(mi_path1, 'w') as f:
       for i in params1:
           f.write(f"{i}\n")
-  log_artifact(mi_path1, "parameters") # Log the saved parameters file
+  log_artifact(mi_path1, "parameters")
   
-  # Log best model info
-  log_param("best_model_name", best_model1) # Changed key slightly for clarity
+  log_param("best_model_name", best_model1)
   log_param("n_best_features", len(best_features1))
   
   title = f'validation_GridSearch.png'
@@ -207,8 +235,4 @@ def train_model(data, *args, **kwargs):
   # mlflow.log_artifact(path_excel1_2)
   # mlflow.log_artifact(path_excel1_3) #FIXME: this is causing an error
 
-  acc1, std1, fbest_model1, input_best_index1 = features_best3(best_features1, best_selected1, data.iloc[:, :-1], X_train1, y_train1, PATH_SAVE_BASE)
-  
-  # return the model trained
-  return GS_fitted1
-  
+  return GS_fitted1, metrics_to_return
