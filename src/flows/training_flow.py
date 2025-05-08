@@ -40,6 +40,8 @@ noop_loggers = {
 def load_data_task(load_data_func: SkipValidation[Callable], parent_run_id: str, *args, **kwargs):
     """
     Prefect task to load data using a provided function.
+    It is assumed that the loaded DataFrame will have the target variable as its last column,
+    as downstream tasks (e.g., model training for input example generation) may rely on this convention.
 
     Args:
         load_data_func (Callable): The function to execute for loading data.
@@ -151,6 +153,10 @@ def train_model_task(train_model_func: SkipValidation[Callable], data: pd.DataFr
     Prefect task to train a model using a provided function.
     The training function IS REQUIRED to return a tuple: (trained_model, metrics_dict).
     
+    The input DataFrame 'data' is expected to have the target variable as its last column.
+    This convention is used, for example, when generating the 'input_example' for MLflow logging,
+    where all columns except the last one are considered features.
+
     The metrics_dict MUST contain the following keys with their corresponding float values:
     - 'accuracy'
     - 'macro_avg_precision'
