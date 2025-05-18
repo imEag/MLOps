@@ -55,3 +55,11 @@ async def get_production_input_example_endpoint(model_name: str):
         raise HTTPException(status_code=500, detail=f"MLflow related error: {error_message}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching input example: {str(e)}")
+      
+@router.post("/{model_name}/predict")
+async def predict(model_name: str, data: dict):
+  try:
+    prediction = ml_model_service.predict(model_name, data)
+    return prediction
+  except Exception as e:
+    raise HTTPException(status_code=500, detail=f"An unexpected error occurred while predicting: {str(e)}")
