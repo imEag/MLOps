@@ -1,6 +1,7 @@
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
 import mlflow.pyfunc # Added for loading model and metadata
+import json
 
 # Assuming these imports are still valid relative to the src directory
 # If your flows/training_script are directly under src, these relative imports are correct from services/
@@ -52,9 +53,17 @@ def get_production_model_input_example(model_name: str):
   client = MlflowClient()
   try:
     prod_model_version = client.get_model_version_by_alias(name=model_name, alias="production")
-    print("prod_model_version: ", prod_model_version)
-    # TODO: Return the input example
-    return prod_model_version
+    
+    prod_model_source = prod_model_version.source
+    run_id = prod_model_source.split("/")[-3]
+    run = mlflow.get_run(run_id)
+    artifact_path = run.info.artifact_uri
+    artifact = mlflow.artifacts.download_artifacts(f"{artifact_path}/model/serving_input_example.json")
+
+    with open(artifact, "r") as f:
+        input_example = json.load(f)
+    
+    return input_example
     
   except MlflowException as e:
     raise e

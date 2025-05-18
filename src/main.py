@@ -1,4 +1,14 @@
 from fastapi import FastAPI
+import mlflow
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+MLFLOW_PORT = os.getenv('MLFLOW_PORT', '5000')
+MLFLOW_TRACKING_URI = f"http://localhost:{MLFLOW_PORT}"
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
 
 app = FastAPI()
 

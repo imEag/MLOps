@@ -38,11 +38,12 @@ async def get_production_model_version_endpoint(model_name: str):
         # Catch other exceptions from the service layer
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
 
-@router.get("/{model_name}/production-input-example", response_model=InputExampleResponse)
+@router.get("/{model_name}/production-input-example")
 async def get_production_input_example_endpoint(model_name: str):
     try:
-        example_data = ml_model_service.get_production_model_input_example(model_name)
-        return {"example": example_data}
+        prod_model_input_example = ml_model_service.get_production_model_input_example(model_name)
+        return prod_model_input_example
+        
     except MlflowException as e:
         # Catching exceptions from the service layer
         error_message = str(e)
