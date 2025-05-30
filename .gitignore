@@ -231,7 +231,7 @@ Desktop.ini
 *.db-shm
 
 # Experimenting results
-Experimenting/Results/*
+/backend/Experimenting/Results/*
 
 # =============================================
 # FRONTEND (Node.js/React/Vite) PATTERNS
