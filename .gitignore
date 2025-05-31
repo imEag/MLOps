@@ -233,6 +233,12 @@ Desktop.ini
 # Experimenting results
 /backend/Experimenting/Results/*
 
+# artifacts
+/backend/artifacts/*
+
+# shared
+/backend/shared/*
+
 # =============================================
 # FRONTEND (Node.js/React/Vite) PATTERNS
 # =============================================

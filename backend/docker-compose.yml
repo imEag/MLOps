@@ -49,6 +49,7 @@ services:
       - "${PREFECT_PORT:-4200}:4200"
     volumes:
       - .:/app
+      - ./artifacts:/mlflow/artifacts
     environment:
       - PREFECT_API_URL=http://0.0.0.0:4200/api
       - MLFLOW_TRACKING_URI=http://mlflow:${MLFLOW_PORT:-5001}

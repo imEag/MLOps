@@ -25,6 +25,10 @@ MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', f"http://mlflow:{MLFLOW_P
 
 TIME_NOW = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+# Configure MLflow client to use remote server for artifacts
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
+
 # --- Helper for Logging ---
 # Define no-op loggers for when functions are called outside the flow context
 def _noop(*args, **kwargs): pass
@@ -289,9 +293,7 @@ def ml_pipeline_flow(
     else:
         print("🍏 No active run to end")
     
-    # Set MLflow Tracking URI and Experiment Name
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
+    # Set MLflow Experiment Name (tracking URI already set globally)
     experiment_name = "ML Training Pipeline"
     mlflow.set_experiment(experiment_name)
 

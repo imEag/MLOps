@@ -20,14 +20,13 @@ done
 
 echo "PostgreSQL is ready!"
 
-# Create artifacts directory if it doesn't exist
-mkdir -p /mlflow/artifacts
-
 # Start MLflow server with artifact serving enabled
 echo "Starting MLflow server on port ${MLFLOW_PORT}..."
 exec mlflow server \
     --host 0.0.0.0 \
     --port $MLFLOW_PORT \
     --backend-store-uri "$BACKEND_STORE_URI" \
+    --registry-store-uri "$BACKEND_STORE_URI" \
     --default-artifact-root /mlflow/artifacts \
+    --artifacts-destination /mlflow/artifacts \
     --serve-artifacts
