@@ -19,10 +19,15 @@ import mlflow.sklearn
 load_dotenv()
 
 # --- MLflow Configuration ---
-MLFLOW_PORT = os.getenv('MLFLOW_PORT', '5000') # Default to 5000 if not set
-MLFLOW_TRACKING_URI = f"http://localhost:{MLFLOW_PORT}"
+MLFLOW_PORT = os.getenv('MLFLOW_PORT', '5001') 
+MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', f"http://mlflow:{MLFLOW_PORT}")
+# MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', f"http://localhost:{MLFLOW_PORT}")
 
 TIME_NOW = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+# Configure MLflow client to use remote server for artifacts
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
 
 # --- Helper for Logging ---
 # Define no-op loggers for when functions are called outside the flow context
@@ -288,8 +293,7 @@ def ml_pipeline_flow(
     else:
         print("🍏 No active run to end")
     
-    # Set MLflow Tracking URI and Experiment Name
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI,)
+    # Set MLflow Experiment Name (tracking URI already set globally)
     experiment_name = "ML Training Pipeline"
     mlflow.set_experiment(experiment_name)
 

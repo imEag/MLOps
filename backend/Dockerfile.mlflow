@@ -1,0 +1,28 @@
+FROM python:3.9-slim
+
+# Install system dependencies including PostgreSQL client
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install mlflow==2.10.0 psycopg2-binary
+
+# Expose the default MLflow port (can be overridden by MLFLOW_PORT env var)
+EXPOSE 5000
+
+WORKDIR /mlflow
+
+# Create artifacts directory with proper permissions
+RUN mkdir -p /mlflow/artifacts && chmod 777 /mlflow/artifacts
+RUN mkdir -p /mlflow/mlruns && chmod 777 /mlflow/mlruns
+
+
+# Copy and set up entrypoint script
+COPY entrypoint-mlflow.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set environment variables for MLflow
+ENV MLFLOW_ARTIFACT_STORE=/mlflow/artifacts
+ENV MLFLOW_BACKEND_STORE_URI=""
+
+CMD ["/entrypoint.sh"]

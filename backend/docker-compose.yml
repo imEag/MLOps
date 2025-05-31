@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -25,18 +23,21 @@ services:
       context: .
       dockerfile: Dockerfile.mlflow
     ports:
-      - "${MLFLOW_PORT:-5000}:5000"
+      - "${MLFLOW_PORT:-5001}:${MLFLOW_PORT:-5001}"
     volumes:
       - ./mlruns:/mlflow/mlruns
+      - ./artifacts:/mlflow/artifacts
     environment:
-      - MLFLOW_TRACKING_URI=http://localhost:${MLFLOW_PORT:-5000}
+      - MLFLOW_TRACKING_URI=http://localhost:${MLFLOW_PORT:-5001}
+      - MLFLOW_PORT=${MLFLOW_PORT:-5001}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-mlops}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - mlops-network
 
@@ -48,15 +49,18 @@ services:
       - "${PREFECT_PORT:-4200}:4200"
     volumes:
       - .:/app
+      - ./artifacts:/mlflow/artifacts
     environment:
       - PREFECT_API_URL=http://0.0.0.0:4200/api
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-mlops}
+      - MLFLOW_TRACKING_URI=http://mlflow:${MLFLOW_PORT:-5001}
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-5432}/prefect_db
       - PREFECT_SERVER_HOST=0.0.0.0
       - PREFECT_SERVER_PORT=4200
     depends_on:
-      - mlflow
-      - postgres
+      mlflow:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     networks:
       - mlops-network
 

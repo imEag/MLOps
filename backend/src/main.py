@@ -5,8 +5,8 @@ import os
 
 load_dotenv()
 
-MLFLOW_PORT = os.getenv('MLFLOW_PORT', '5000')
-MLFLOW_TRACKING_URI = f"http://localhost:{MLFLOW_PORT}"
+MLFLOW_PORT = os.getenv('MLFLOW_PORT', '5001')
+MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', f"http://mlflow:{MLFLOW_PORT}")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_registry_uri(MLFLOW_TRACKING_URI)
 

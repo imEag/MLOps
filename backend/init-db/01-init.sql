@@ -1,3 +1,12 @@
+-- Drop and recreate schemas to ensure clean state
+DROP SCHEMA IF EXISTS mlflow CASCADE;
+DROP SCHEMA IF EXISTS predictions CASCADE;
+DROP SCHEMA IF EXISTS training_data CASCADE;
+DROP SCHEMA IF EXISTS prefect CASCADE;
+
+-- Create additional database for Prefect
+SELECT 'CREATE DATABASE prefect_db' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'prefect_db')\gexec
+
 -- Create schemas
 CREATE SCHEMA IF NOT EXISTS mlflow;
 CREATE SCHEMA IF NOT EXISTS predictions;
@@ -40,4 +49,4 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA training_data TO postgres;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA prefect TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA predictions TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA training_data TO postgres;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA prefect TO postgres; 
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA prefect TO postgres;
