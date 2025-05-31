@@ -64,6 +64,31 @@ services:
     networks:
       - mlops-network
 
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    ports:
+      - "${FASTAPI_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+      - ./artifacts:/mlflow/artifacts
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:${MLFLOW_PORT:-5001}
+      - MLFLOW_PORT=${MLFLOW_PORT:-5001}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-mlops}
+    depends_on:
+      mlflow:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    networks:
+      - mlops-network
+
 volumes:
   postgres_data:
 
