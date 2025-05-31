@@ -231,4 +231,142 @@ Desktop.ini
 *.db-shm
 
 # Experimenting results
-Experimenting/Results/*
+/backend/Experimenting/Results/*
+
+# artifacts
+/backend/artifacts/*
+
+# shared
+/backend/shared/*
+
+# =============================================
+# FRONTEND (Node.js/React/Vite) PATTERNS
+# =============================================
+
+# Dependencies
+frontend/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+frontend/dist/
+frontend/build/
+dist/
+build/
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Vite
+frontend/.vite/
+.vite/
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+frontend/coverage/
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# ESLint cache
+frontend/.eslintcache
+.eslintcache
+
+# Storybook build outputs
+frontend/storybook-static/
+storybook-static/
+
+# Temporary folders
+tmp/
+temp/
+
+# Package manager lock files (if using different managers)
+# Uncomment the ones you're NOT using:
+# frontend/package-lock.json
+# frontend/yarn.lock
+# frontend/pnpm-lock.yaml
+
+# Local development
+frontend/.turbo/
+.turbo/
+
+# Next.js (if switching to Next.js later)
+frontend/.next/
+.next/
+
+# Nuxt.js (if using Nuxt)
+frontend/.nuxt/
+.nuxt/
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
