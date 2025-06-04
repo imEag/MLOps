@@ -3,6 +3,7 @@ FROM python:3.9-slim
 # Install system dependencies including PostgreSQL client
 RUN apt-get update && apt-get install -y \
     postgresql-client \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install mlflow==2.10.0 psycopg2-binary

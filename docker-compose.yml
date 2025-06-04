@@ -20,13 +20,13 @@ services:
 
   mlflow:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.mlflow
     ports:
       - "${MLFLOW_PORT:-5001}:${MLFLOW_PORT:-5001}"
     volumes:
-      - ./mlruns:/mlflow/mlruns
-      - ./artifacts:/mlflow/artifacts
+      - ./backend/mlruns:/mlflow/mlruns
+      - ./backend/artifacts:/mlflow/artifacts
     environment:
       - MLFLOW_TRACKING_URI=http://localhost:${MLFLOW_PORT:-5001}
       - MLFLOW_PORT=${MLFLOW_PORT:-5001}
@@ -35,6 +35,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-mlops}
+      - GIT_PYTHON_REFRESH=quiet
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,19 +44,20 @@ services:
 
   prefect:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "${PREFECT_PORT:-4200}:4200"
     volumes:
-      - .:/app
-      - ./artifacts:/mlflow/artifacts
+      - ./backend:/app
+      - ./backend/artifacts:/mlflow/artifacts
     environment:
       - PREFECT_API_URL=http://0.0.0.0:4200/api
       - MLFLOW_TRACKING_URI=http://mlflow:${MLFLOW_PORT:-5001}
       - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-5432}/prefect_db
       - PREFECT_SERVER_HOST=0.0.0.0
       - PREFECT_SERVER_PORT=4200
+      - GIT_PYTHON_REFRESH=quiet
     depends_on:
       mlflow:
         condition: service_started
@@ -66,13 +68,13 @@ services:
 
   fastapi:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.fastapi
     ports:
       - "${FASTAPI_PORT:-8000}:8000"
     volumes:
-      - .:/app
-      - ./artifacts:/mlflow/artifacts
+      - ./backend:/app
+      - ./backend/artifacts:/mlflow/artifacts
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:${MLFLOW_PORT:-5001}
       - MLFLOW_PORT=${MLFLOW_PORT:-5001}
@@ -81,11 +83,32 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-mlops}
+      - PREFECT_API_URL=http://prefect:4200/api
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-5432}/prefect_db
+      - GIT_PYTHON_REFRESH=quiet
     depends_on:
       mlflow:
         condition: service_started
       postgres:
         condition: service_healthy
+      prefect:
+        condition: service_started
+    networks:
+      - mlops-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:${FASTAPI_PORT:-8000}
+    depends_on:
+      - fastapi
     networks:
       - mlops-network
 
