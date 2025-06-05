@@ -1,9 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from mlflow.exceptions import MlflowException
+import pandas as pd
+import os
 
-# Updated imports to use services and schemas
 from ..services import ml_model_service
-from ..schemas.model_schemas import ModelVersionResponse, TrainResponse, InputExampleResponse
+from ..schemas.model_schemas import (
+    ModelVersionResponse, TrainResponse,
+    ModelInfo, TrainingHistory, 
+    PredictionHistory, DashboardSummary, 
+)
 
 router = APIRouter(
     prefix="/api/models",
@@ -63,3 +68,168 @@ async def predict(model_name: str, data: dict):
     return prediction
   except Exception as e:
     raise HTTPException(status_code=500, detail=f"An unexpected error occurred while predicting: {str(e)}")
+
+@router.get("/dashboard", response_model=DashboardSummary)
+async def get_dashboard_summary():
+    """Get dashboard summary with all registered models and recent activity."""
+    try:
+        summary = ml_model_service.get_dashboard_summary()
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting dashboard summary: {str(e)}")
+
+@router.get("/{model_name}/info", response_model=ModelInfo)
+async def get_current_model_info(model_name: str):
+    """Get detailed information about the current production model."""
+    try:
+        model_info = ml_model_service.get_current_model_info(model_name)
+        if not model_info:
+            raise HTTPException(status_code=404, detail=f"No production model found with name '{model_name}'")
+        return model_info
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting model info: {str(e)}")
+
+@router.get("/{model_name}/training-history")
+async def get_training_history(
+    model_name: str, 
+    limit: int = Query(default=10, ge=1, le=100)
+):
+    """Get training history for a model."""
+    # FIXME: This is only returning the trainings from the registered models, not the training runs from the experiments
+    try:
+        history = ml_model_service.get_training_history(model_name, limit)
+        return {"training_history": history, "total_count": len(history)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting training history: {str(e)}")
+
+@router.get("/{model_name}/latest-training", response_model=TrainingHistory)
+async def get_latest_training(model_name: str):
+    """Get the most recent training run for a model."""
+    # FIXME: This is only returning the trainings from the registered models, not the training runs from the experiments
+    try:
+        latest_training = ml_model_service.get_latest_training(model_name)
+        if not latest_training:
+            raise HTTPException(status_code=404, detail=f"No training history found for model '{model_name}'")
+        return latest_training
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting latest training: {str(e)}")
+
+@router.get("/predictions/history", response_model=PredictionHistory)
+async def get_prediction_history(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0)
+):
+    """Get prediction history with pagination."""
+    try:
+        history = ml_model_service.get_prediction_history(limit, offset)
+        return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting prediction history: {str(e)}")
+
+@router.get("/predictions/stats")
+async def get_prediction_stats():
+    """Get prediction statistics from MLflow."""
+    try:
+        stats = ml_model_service.get_prediction_stats()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting prediction stats: {str(e)}")
+
+@router.get("/flows/recent")
+async def get_recent_flow_runs(limit: int = Query(default=10, ge=1, le=50)):
+    """Get recent Prefect flow runs."""
+    try:
+        flows = ml_model_service.get_prefect_flow_runs(limit)
+        return {"flows": flows, "count": len(flows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting recent flows: {str(e)}")
+
+@router.get("/health/services")
+async def check_services_health():
+    """Check health of all connected services (MLflow, Prefect)."""
+    try:
+        health_status = {"services": {}}
+        
+        # Check MLflow
+        try:
+            import mlflow
+            mlflow.search_experiments(max_results=1)
+            health_status["services"]["mlflow"] = {"status": "healthy", "url": os.getenv('MLFLOW_TRACKING_URI')}
+        except Exception as e:
+            health_status["services"]["mlflow"] = {"status": "unhealthy", "error": str(e)}
+        
+        # Check Prefect
+        try:
+            flows = ml_model_service.get_prefect_flow_runs(limit=1)
+            health_status["services"]["prefect"] = {"status": "healthy", "url": ml_model_service.PREFECT_API_URL}
+        except Exception as e:
+            health_status["services"]["prefect"] = {"status": "unhealthy", "error": str(e)}
+        
+        # Overall status
+        all_healthy = all(
+            service["status"] == "healthy" 
+            for service in health_status["services"].values()
+        )
+        health_status["overall"] = "healthy" if all_healthy else "degraded"
+        
+        return health_status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking services health: {str(e)}")
+
+@router.get("/available")
+async def get_available_models():
+    """Get list of all available registered models."""
+    try:
+        models = ml_model_service.get_available_models()
+        return {"models": models, "count": len(models)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting available models: {str(e)}")
+
+@router.get("/experiments")
+async def get_experiments_summary():
+    """Get summary of all MLflow experiments."""
+    try:
+        experiments = ml_model_service.get_experiments_summary()
+        return {"experiments": experiments, "count": len(experiments)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting experiments: {str(e)}")
+
+@router.get("/{model_name}/versions")
+async def get_model_versions(model_name: str):
+    """Get detailed information about all versions of a model."""
+    try:
+        versions = ml_model_service.get_model_versions_info(model_name)
+        if not versions:
+            raise HTTPException(status_code=404, detail=f"No versions found for model '{model_name}'")
+        return {"model_name": model_name, "versions": versions, "count": len(versions)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting model versions: {str(e)}")
+
+@router.post("/{model_name}/promote/{version}")
+async def promote_model_to_production(model_name: str, version: str):
+    """Promote a specific model version to production."""
+    try:
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
+        
+        # Use the correct method name for MLflow 2.x
+        client.set_registered_model_alias(
+            name=model_name,
+            alias="production",
+            version=version
+        )
+        
+        return {
+            "message": f"Model {model_name} version {version} promoted to production",
+            "model_name": model_name,
+            "version": version,
+            "alias": "production"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error promoting model: {str(e)}")

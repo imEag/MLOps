@@ -26,9 +26,10 @@ COPY . .
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV MLFLOW_TRACKING_URI=http://mlflow:5001
+ENV PYTHONUNBUFFERED=1
 
 # Expose the FastAPI port
 EXPOSE 8000
 
 # Run FastAPI with uvicorn
-CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 
+CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug", "--access-log"] 
