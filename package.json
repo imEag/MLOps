@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@ant-design/cssinjs": "^1.23.0"
+  }
+}

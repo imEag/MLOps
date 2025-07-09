@@ -68,7 +68,7 @@ const HeaderComponent = () => {
               fontWeight: 'bold',
             }}
           >
-            NeuroFlow
+            NeurOps
           </Title>
         </div>
 

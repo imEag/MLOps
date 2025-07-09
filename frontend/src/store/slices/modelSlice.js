@@ -28,9 +28,16 @@ export const fetchLatestTraining = createAsyncThunk(
 
 export const startTraining = createAsyncThunk(
   'model/startTraining',
-  async (_, { rejectWithValue }) => {
+  async (_, { dispatch, getState, rejectWithValue }) => {
     try {
       const data = await modelService.trainModel();
+      const { model } = getState();
+      if (model.selectedModelName) {
+        // Refetch training history to show the new 'running' state
+        dispatch(
+          fetchTrainingHistory({ modelName: model.selectedModelName, limit: 10 }),
+        );
+      }
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -76,9 +83,16 @@ export const fetchModelVersions = createAsyncThunk(
 
 export const promoteModel = createAsyncThunk(
   'model/promoteModel',
-  async ({ modelName, version }, { rejectWithValue }) => {
+  async ({ modelName, version }, { dispatch, rejectWithValue }) => {
     try {
-      const data = await modelService.promoteModelToProduction(modelName, version);
+      const data = await modelService.promoteModelToProduction(
+        modelName,
+        version,
+      );
+      // After successful promotion, dispatch actions to refetch all relevant data
+      dispatch(fetchModelInfo(modelName));
+      dispatch(fetchModelVersions(modelName));
+      dispatch(fetchTrainingHistory({ modelName, limit: 10 }));
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

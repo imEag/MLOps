@@ -25,8 +25,10 @@ import exclamationIcon from '../../assets/images/exclamation-circle.svg';
 import circleDottedIcon from '../../assets/images/circle-dotted.svg';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
-import { fetchDashboardSummary } from '../../store/slices/dashboardSlice';
-import { startTraining } from '../../store/slices/modelSlice';
+import {
+  fetchDashboardSummary,
+} from '../../store/slices/dashboardSlice';
+import { startTraining, clearTrainingMessage } from '../../store/slices/modelSlice';
 import { formatDate } from '../../utils/dateFormatter';
 
 const { Title, Text } = Typography;
@@ -351,6 +353,7 @@ const ModelManagementCard = () => {
               type="success"
               showIcon
               closable
+              onClose={() => dispatch(clearTrainingMessage())}
               style={{ marginBottom: 16 }}
             />
           )}
