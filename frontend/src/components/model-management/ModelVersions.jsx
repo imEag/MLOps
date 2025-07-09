@@ -3,10 +3,16 @@ import PropTypes from 'prop-types';
 import { Card, Table, Spin, Alert, Button, Space, Tag, App } from 'antd';
 import { BranchesOutlined, TrophyOutlined } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
-import { fetchModelVersions, promoteModel, clearTrainingMessage } from '@/store/slices/modelSlice';
+import {
+  fetchModelVersions,
+  promoteModel,
+  clearTrainingMessage,
+} from '@/store/slices/modelSlice';
 import { formatDate } from '@/utils/dateFormatter';
+import { useIsMobile } from '@/hooks/useBreakpoint';
 
 const ModelVersions = ({ modelName }) => {
+  const isMobile = useIsMobile();
   const { modal, notification } = App.useApp();
   const dispatch = useAppDispatch();
   const { modelVersions, loading, error, trainingMessage } = useAppSelector(
@@ -54,20 +60,6 @@ const ModelVersions = ({ modelName }) => {
       render: (text) => formatDate(text),
     },
     {
-      title: 'Stage',
-      dataIndex: 'current_stage',
-      key: 'current_stage',
-      render: (stage) => (
-        <Tag color={stage === 'Production' ? 'green' : 'default'}>{stage}</Tag>
-      ),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (text) => text || 'N/A',
-    },
-    {
       title: 'Action',
       key: 'action',
       render: (_, record) => (
@@ -76,8 +68,26 @@ const ModelVersions = ({ modelName }) => {
           icon={<TrophyOutlined />}
           onClick={() => handlePromote(record.version)}
           disabled={record.current_stage === 'Production'}
+          style={
+            isMobile
+              ? {
+                  fontSize: '12px',
+                  height: 'auto',
+                  padding: '4px 8px',
+                  lineHeight: '1.4',
+                }
+              : {}
+          }
         >
-          Promote to Production
+          {isMobile ? (
+            <>
+              Promote
+              <br />
+              to Production
+            </>
+          ) : (
+            'Promote to Production'
+          )}
         </Button>
       ),
     },
@@ -99,7 +109,9 @@ const ModelVersions = ({ modelName }) => {
       ) : error ? (
         <Alert
           message="Error fetching model versions"
-          description={error.detail || error.message || 'An unknown error occurred.'}
+          description={
+            error.detail || error.message || 'An unknown error occurred.'
+          }
           type="error"
           showIcon
         />
@@ -109,6 +121,7 @@ const ModelVersions = ({ modelName }) => {
           dataSource={modelVersions}
           rowKey="version"
           pagination={{ pageSize: 5 }}
+          scroll={{ x: 'max-content' }}
         />
       )}
     </Card>

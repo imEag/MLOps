@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DashboardOutlined,
@@ -6,6 +6,7 @@ import {
   LineChartOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
+import { useIsMobile } from '@/hooks/useBreakpoint';
 const { Sider } = Layout;
 
 const items2 = [
@@ -30,6 +31,12 @@ const SiderComponent = () => {
   const {
     token: { colorBgContainer, lineWidth, colorBorder, paddingLG, paddingSM },
   } = theme.useToken();
+  const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState(isMobile);
+
+  useEffect(() => {
+    setCollapsed(isMobile);
+  }, [isMobile]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -51,13 +58,16 @@ const SiderComponent = () => {
   return (
     <Sider
       width={230}
+      collapsedWidth={isMobile ? 70 : 80} // Reduced collapsed width only for mobile
       style={{
         background: colorBgContainer,
         height: '100%',
         paddingTop: `${paddingLG}px`,
         paddingBottom: `${paddingLG}px`,
       }}
-      collapsible
+      collapsible={!isMobile}
+      collapsed={collapsed}
+      onCollapse={setCollapsed}
     >
       <Menu
         mode="inline"

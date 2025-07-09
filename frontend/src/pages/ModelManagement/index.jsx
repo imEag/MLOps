@@ -1,14 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  Typography,
-  Select,
-  Row,
-  Col,
-  Spin,
-  Alert,
-  Empty,
-  Card,
-} from 'antd';
+import { Typography, Select, Row, Col, Spin, Alert, Empty, Card } from 'antd';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   fetchAvailableModels,
@@ -17,17 +8,16 @@ import {
 import CurrentModelInfo from '@/components/model-management/CurrentModelInfo';
 import TrainingHistory from '@/components/model-management/TrainingHistory';
 import ModelVersions from '@/components/model-management/ModelVersions';
+import { useIsMobile } from '@/hooks/useBreakpoint';
 
 const { Title, Text } = Typography;
 
 const ModelManagement = () => {
+  const isMobile = useIsMobile();
   const dispatch = useAppDispatch();
-  const {
-    availableModels,
-    selectedModelName,
-    loading,
-    error,
-  } = useAppSelector((state) => state.model);
+  const { availableModels, selectedModelName, loading, error } = useAppSelector(
+    (state) => state.model,
+  );
 
   useEffect(() => {
     dispatch(fetchAvailableModels());
@@ -51,7 +41,7 @@ const ModelManagement = () => {
           <Col>
             <Select
               value={selectedModelName}
-              style={{ width: 250 }}
+              style={{ width: isMobile ? 200 : 250 }}
               onChange={handleModelChange}
               loading={loading}
               placeholder="Select a model"
@@ -84,14 +74,14 @@ const ModelManagement = () => {
 
       {selectedModelName ? (
         <Row gutter={[24, 24]}>
-          <Col xs={24} lg={12}>
+          <Col xs={24} md={24} lg={24} xl={12}>
             <CurrentModelInfo modelName={selectedModelName} />
           </Col>
-          <Col xs={24} lg={12}>
-            <TrainingHistory modelName={selectedModelName} />
+          <Col xs={24} md={24} lg={24} xl={12}>
+            <ModelVersions modelName={selectedModelName} />
           </Col>
           <Col xs={24}>
-            <ModelVersions modelName={selectedModelName} />
+            <TrainingHistory modelName={selectedModelName} />
           </Col>
         </Row>
       ) : (

@@ -4,6 +4,7 @@ import { Breadcrumb, Layout, theme } from 'antd';
 import { useLocation } from 'react-router-dom';
 import HeaderComponent from '../Header';
 import SiderComponent from '../Sider';
+import { useIsMobile } from '@/hooks/useBreakpoint';
 // import FooterComponent from '../Footer'; // Uncomment if you want to use the footer
 
 const { Content } = Layout;
@@ -12,6 +13,7 @@ const LayoutComponent = () => {
   const {
     token: { colorBgContainer, lineWidth, colorBorder },
   } = theme.useToken();
+  const isMobile = useIsMobile();
 
   const location = useLocation();
 
@@ -48,7 +50,7 @@ const LayoutComponent = () => {
         <SiderComponent />
         <Layout
           style={{
-            padding: '0 24px 24px',
+            padding: isMobile ? '0 12px 12px' : '0 24px 24px',
             height: '100%',
             overflow: 'auto',
             backgroundColor: colorBgContainer,
@@ -60,7 +62,7 @@ const LayoutComponent = () => {
           />
           <Content
             style={{
-              padding: 24,
+              padding: isMobile ? '12px 6px 6px' : '24px',
               margin: 0,
               flex: 1,
               overflow: 'auto',

@@ -98,7 +98,7 @@ const TrainingHistory = ({ modelName }) => {
           dataSource={trainingHistory}
           rowKey="run_id"
           pagination={{ pageSize: 5 }}
-          scroll={{ y: 240 }}
+          scroll={{ x: 'max-content' }}
         />
       )}
 

@@ -6,11 +6,13 @@ import brainIcon from '../../assets/images/brain.svg';
 import externalLinkIcon from '../../assets/images/external-link.svg';
 const { Header } = Layout;
 const { Title } = Typography;
+import { useIsMobile } from '@/hooks/useBreakpoint';
 
 const HeaderComponent = () => {
   const {
     token: { lineWidth, colorBorder },
   } = theme.useToken();
+  const isMobile = useIsMobile();
 
   const handleMLFlowClick = () => {
     window.open('http://localhost:5001', '_blank', 'noopener,noreferrer');
@@ -54,8 +56,8 @@ const HeaderComponent = () => {
             src={brainIcon}
             alt="Brain Icon"
             style={{
-              width: '24px',
-              height: '24px',
+              width: isMobile ? '16px' : '24px',
+              height: isMobile ? '16px' : '24px',
               marginRight: '12px',
               marginLeft: '0px',
             }}
@@ -66,19 +68,21 @@ const HeaderComponent = () => {
               margin: 0,
               color: '#1890ff',
               fontWeight: 'bold',
+              fontSize: isMobile ? '18px' : '24px',
             }}
           >
             NeurOps
           </Title>
         </div>
 
-        <Space size="middle">
+        <Space size={isMobile ? 'small' : 'middle'}>
           <Button
             type="default"
             icon={<ExperimentOutlined />}
             onClick={handleMLFlowClick}
             className="external-button"
             style={buttonStyle}
+            size={isMobile ? 'small' : 'middle'}
           >
             MLFlow
             <img
@@ -94,6 +98,7 @@ const HeaderComponent = () => {
             onClick={handlePrefectClick}
             className="external-button"
             style={buttonStyle}
+            size={isMobile ? 'small' : 'middle'}
           >
             Prefect
             <img
