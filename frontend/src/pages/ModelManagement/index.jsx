@@ -1,9 +1,24 @@
 import React, { useEffect } from 'react';
-import { Typography, Select, Row, Col, Spin, Alert, Empty, Card } from 'antd';
+import {
+  Typography,
+  Select,
+  Row,
+  Col,
+  Spin,
+  Alert,
+  Empty,
+  Card,
+  Button,
+  Space,
+  App,
+} from 'antd';
+import { PlayCircleOutlined } from '@ant-design/icons';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   fetchAvailableModels,
   setSelectedModel,
+  startTraining,
+  clearTrainingMessage,
 } from '@/store/slices/modelSlice';
 import CurrentModelInfo from '@/components/model-management/CurrentModelInfo';
 import TrainingHistory from '@/components/model-management/TrainingHistory';
@@ -15,16 +30,36 @@ const { Title, Text } = Typography;
 const ModelManagement = () => {
   const isMobile = useIsMobile();
   const dispatch = useAppDispatch();
-  const { availableModels, selectedModelName, loading, error } = useAppSelector(
-    (state) => state.model,
-  );
+  const { notification } = App.useApp();
+  const {
+    availableModels,
+    selectedModelName,
+    loading,
+    error,
+    trainingLoading,
+    trainingMessage,
+  } = useAppSelector((state) => state.model);
 
   useEffect(() => {
     dispatch(fetchAvailableModels());
   }, [dispatch]);
 
+  useEffect(() => {
+    if (trainingMessage) {
+      notification.success({
+        message: 'Training Initiated',
+        description: trainingMessage,
+      });
+      dispatch(clearTrainingMessage());
+    }
+  }, [trainingMessage, notification, dispatch]);
+
   const handleModelChange = (value) => {
     dispatch(setSelectedModel(value));
+  };
+
+  const handleStartTraining = () => {
+    dispatch(startTraining());
   };
 
   return (
@@ -34,25 +69,36 @@ const ModelManagement = () => {
       </Title>
 
       <Card style={{ marginBottom: '24px' }}>
-        <Row align="middle" gutter={16}>
+        <Row align="middle" justify="space-between" style={{ gap: 16 }}>
           <Col>
-            <Text strong>Select a Model to Manage:</Text>
+            <Space align="center" wrap>
+              <Text strong>Select Model:</Text>
+              <Select
+                value={selectedModelName}
+                style={{ width: isMobile ? 200 : 250 }}
+                onChange={handleModelChange}
+                loading={loading}
+                placeholder="Select a model"
+                disabled={!availableModels.length}
+              >
+                {availableModels.map((model) => (
+                  <Select.Option key={model.name} value={model.name}>
+                    {model.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Space>
           </Col>
           <Col>
-            <Select
-              value={selectedModelName}
-              style={{ width: isMobile ? 200 : 250 }}
-              onChange={handleModelChange}
-              loading={loading}
-              placeholder="Select a model"
-              disabled={!availableModels.length}
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={handleStartTraining}
+              loading={trainingLoading}
+              disabled={!selectedModelName}
             >
-              {availableModels.map((model) => (
-                <Select.Option key={model.name} value={model.name}>
-                  {model.name}
-                </Select.Option>
-              ))}
-            </Select>
+              {isMobile ? 'Train' : 'Start New Training'}
+            </Button>
           </Col>
         </Row>
       </Card>
