@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from mlflow.exceptions import MlflowException
 import pandas as pd
 import os
@@ -17,15 +17,15 @@ router = APIRouter(
 )
 
 @router.post("/train", response_model=TrainResponse)
-async def train_model_endpoint():
+async def train_model_endpoint(background_tasks: BackgroundTasks):
     try:
-        flow_state = ml_model_service.run_ml_training_pipeline()
-        return {"message": "Model training initiated successfully via service", "flow_state": str(flow_state)}
+        background_tasks.add_task(ml_model_service.run_ml_training_pipeline)
+        return {"message": "Model training initiated in the background.", "flow_state": "STARTED"}
     except ImportError as e: # Catch potential import errors from the service layer if they occur at runtime
         raise HTTPException(status_code=500, detail=f"Error during model training (possibly import-related from service): {str(e)}")
     except Exception as e:
         # Catch other exceptions from the service layer
-        raise HTTPException(status_code=500, detail=f"Error during model training: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error initiating model training: {str(e)}")
 
 @router.get("/{model_name}/production-version", response_model=ModelVersionResponse)
 async def get_production_model_version_endpoint(model_name: str):
