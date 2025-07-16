@@ -17,7 +17,7 @@ const ExperimentHistory = () => {
   const [selectedMetrics, setSelectedMetrics] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchExperimentHistory({ limit: 10 }));
+    dispatch(fetchExperimentHistory({ limit: 1000 }));
   }, [dispatch]);
 
   const showMetricsModal = (metrics) => {
