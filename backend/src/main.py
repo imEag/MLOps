@@ -3,6 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 import mlflow
 from dotenv import load_dotenv
 import os
+import logging
+import time
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+    ]
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -26,12 +38,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    start_time = time.time()
+    logger.info(f"Request: {request.method} {request.url}")
+    print(f"=== REQUEST: {request.method} {request.url} ===")
+    
+    response = await call_next(request)
+    
+    process_time = time.time() - start_time
+    logger.info(f"Response: {response.status_code} in {process_time:.4f}s")
+    print(f"=== RESPONSE: {response.status_code} in {process_time:.4f}s ===")
+    
+    return response
+
 @app.get("/")
 async def root():
+    logger.info("Root endpoint called")
+    print("=== ROOT ENDPOINT CALLED ===")
     return {"message": "Welcome to the ML API"}
 
 @app.get("/health")
 async def health_check():
+    logger.info("Health check endpoint called")
+    print("=== HEALTH CHECK ENDPOINT CALLED ===")
     return {"status": "healthy", "mlflow_uri": MLFLOW_TRACKING_URI}
 
 # Placeholder for API routers
