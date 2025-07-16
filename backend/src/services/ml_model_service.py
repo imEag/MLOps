@@ -764,6 +764,41 @@ def get_model_versions_info(model_name: str) -> List[dict]:
         print(f"Error getting model versions info: {e}")
         return []
 
+def register_model_from_run(run_id: str, model_name: str):
+    """Register a model from a specific run if a model artifact exists."""
+    client = MlflowClient()
+    try:
+        # Check if a model was logged in the run
+        artifacts = client.list_artifacts(run_id, path="model")
+        if not any(artifact.path.endswith("MLmodel") for artifact in artifacts):
+            raise ValueError(f"No model found in run {run_id}. Cannot register.")
+
+        # Register the model
+        model_uri = f"runs:/{run_id}/model"
+        model_version = mlflow.register_model(model_uri, model_name)
+        
+        return {
+            "message": "Model registered successfully",
+            "model_name": model_version.name,
+            "version": model_version.version,
+            "run_id": run_id
+        }
+    except MlflowException as e:
+        # Handle cases where the model name already exists but you might want to create a new version
+        if "RESOURCE_ALREADY_EXISTS" in str(e):
+            model_uri = f"runs:/{run_id}/model"
+            model_version = mlflow.register_model(model_uri, model_name)
+            return {
+                "message": f"New version for model '{model_name}' registered.",
+                "model_name": model_version.name,
+                "version": model_version.version,
+                "run_id": run_id,
+            }
+        raise e
+    except Exception as e:
+        print(f"Error registering model from run {run_id}: {e}")
+        raise e
+
 def get_prediction_stats():
     """Get prediction statistics from MLflow."""
     try:

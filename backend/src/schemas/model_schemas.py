@@ -79,6 +79,12 @@ class PredictionHistory(BaseModel):
 class ParentExperimentHistory(ExperimentHistory):
     child_runs: List[ExperimentHistory] = []
 
+class RegisterModelResponse(BaseModel):
+    message: str
+    model_name: str
+    version: str
+    run_id: str
+
 class GroupedExperimentHistoryResponse(BaseModel):
     runs: List[ParentExperimentHistory]
     total_count: int

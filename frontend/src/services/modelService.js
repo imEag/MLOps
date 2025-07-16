@@ -59,6 +59,13 @@ export const modelService = {
     return response.data;
   },
 
+  registerModel: async (runId, modelName) => {
+    const response = await api.post(
+      `/api/models/register?run_id=${runId}&model_name=${modelName}`,
+    );
+    return response.data;
+  },
+
   // Get available models
   getAvailableModels: async () => {
     const response = await api.get('/api/models/available');

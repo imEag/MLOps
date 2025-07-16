@@ -3,13 +3,17 @@ import { modelService } from '../../services/modelService';
 
 // Async thunks
 export const fetchModelInfo = createAsyncThunk(
-  'model/fetchInfo',
+  'model/fetchModelInfo',
   async (modelName, { rejectWithValue }) => {
     try {
       const data = await modelService.getModelInfo(modelName);
       return data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue({
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
     }
   },
 );
@@ -112,6 +116,22 @@ export const promoteModel = createAsyncThunk(
   },
 );
 
+export const registerModel = createAsyncThunk(
+  'model/registerModel',
+  async ({ runId, modelName }, { dispatch, rejectWithValue }) => {
+    try {
+      const data = await modelService.registerModel(runId, modelName);
+      dispatch(fetchAvailableModels()); // Refresh available models list
+      dispatch(fetchModelVersions(modelName)); // Refresh model versions
+      dispatch(fetchTrainingHistory({ modelName, limit: 10 })); // Refresh training history
+      dispatch(fetchModelInfo(modelName)); // Refresh current model info
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 const initialState = {
   currentModel: null,
   latestTraining: null,
@@ -124,6 +144,9 @@ const initialState = {
   error: null,
   trainingMessage: null,
   selectedModelName: null,
+  registrationStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  registrationMessage: null,
+  registrationError: null,
 };
 
 const modelSlice = createSlice({
@@ -145,6 +168,11 @@ const modelSlice = createSlice({
       state.trainingHistory = [];
       state.modelVersions = [];
     },
+    clearRegistrationStatus: (state) => {
+      state.registrationStatus = 'idle';
+      state.registrationMessage = null;
+      state.registrationError = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -159,7 +187,15 @@ const modelSlice = createSlice({
       })
       .addCase(fetchModelInfo.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        if (action.payload?.status === 404) {
+          state.error = null; // Gracefully handle no production model
+        } else {
+          state.error =
+            action.payload?.data?.detail ||
+            action.payload?.message ||
+            'An unknown error occurred.';
+        }
+        state.currentModel = null;
       })
       // Fetch latest training
       .addCase(fetchLatestTraining.pending, (state) => {
@@ -247,10 +283,30 @@ const modelSlice = createSlice({
       })
       .addCase(promoteModel.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error =
+          action.payload?.detail ||
+          action.payload?.message ||
+          'An unknown error occurred.';
+      })
+      // Register model
+      .addCase(registerModel.pending, (state) => {
+        state.registrationStatus = 'loading';
+        state.registrationMessage = null;
+        state.registrationError = null;
+      })
+      .addCase(registerModel.fulfilled, (state, action) => {
+        state.registrationStatus = 'succeeded';
+        state.registrationMessage = action.payload.message;
+      })
+      .addCase(registerModel.rejected, (state, action) => {
+        state.registrationStatus = 'failed';
+        state.registrationError =
+          action.payload?.detail ||
+          action.payload?.message ||
+          'An unknown error occurred.';
       });
   },
 });
 
-export const { clearError, clearTrainingMessage, setSelectedModel, clearModelData } = modelSlice.actions;
+export const { clearError, clearTrainingMessage, setSelectedModel, clearModelData, clearRegistrationStatus } = modelSlice.actions;
 export default modelSlice.reducer;

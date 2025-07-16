@@ -8,7 +8,7 @@ from ..schemas.model_schemas import (
     ModelVersionResponse, TrainResponse,
     ModelInfo, ExperimentHistory, 
     PredictionHistory, DashboardSummary, 
-    ModelTrainingHistory
+    ModelTrainingHistory, RegisterModelResponse
 )
 
 router = APIRouter(
@@ -256,3 +256,16 @@ async def promote_model_to_production(model_name: str, version: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error promoting model: {str(e)}")
+
+@router.post("/register", response_model=RegisterModelResponse)
+async def register_model_from_run_endpoint(run_id: str, model_name: str):
+    """Register a model from a specific run, if a model artifact exists."""
+    try:
+        result = ml_model_service.register_model_from_run(run_id, model_name)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except MlflowException as e:
+        raise HTTPException(status_code=500, detail=f"MLflow error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
