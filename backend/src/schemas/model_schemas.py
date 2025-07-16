@@ -43,8 +43,8 @@ class ModelInfo(BaseModel):
     last_updated_timestamp: Optional[Any] = None
     metrics: Optional[ModelMetrics] = None
     experiment_name: Optional[str] = None
-
-class TrainingHistory(BaseModel):
+    
+class ModelTrainingHistory(BaseModel):
     run_id: str
     run_name: Optional[str] = None
     start_time: Optional[Any] = None
@@ -52,7 +52,19 @@ class TrainingHistory(BaseModel):
     status: str
     metrics: Optional[ModelMetrics] = None
     model_version: Optional[str] = None
-    
+
+class ExperimentHistory(BaseModel):
+    run_id: str
+    run_name: Optional[str] = None
+    experiment_id: str
+    experiment_name: str
+    start_time: Optional[Any] = None
+    end_time: Optional[Any] = None
+    status: str
+    metrics: Optional[ModelMetrics] = None
+    artifact_uri: Optional[str] = None
+    tags: Optional[Dict[str, Any]] = None
+
 class PredictionResponse(BaseModel):
     prediction: Any
     model_name: str
@@ -68,7 +80,7 @@ class ModelSummary(BaseModel):
     model_name: str
     production_version: Optional[str] = None
     total_versions: int
-    latest_training: Optional[TrainingHistory] = None
+    latest_model_training: Optional[ModelTrainingHistory] = None
     current_metrics: Optional[ModelMetrics] = None
     description: Optional[str] = None
 

@@ -6,8 +6,9 @@ import os
 from ..services import ml_model_service
 from ..schemas.model_schemas import (
     ModelVersionResponse, TrainResponse,
-    ModelInfo, TrainingHistory, 
+    ModelInfo, ExperimentHistory, 
     PredictionHistory, DashboardSummary, 
+    ModelTrainingHistory
 )
 
 router = APIRouter(
@@ -92,31 +93,53 @@ async def get_current_model_info(model_name: str):
         raise HTTPException(status_code=500, detail=f"Error getting model info: {str(e)}")
 
 @router.get("/{model_name}/training-history")
-async def get_training_history(
+async def get_model_training_history(
     model_name: str, 
     limit: int = Query(default=10, ge=1, le=100)
 ):
     """Get training history for a model."""
-    # FIXME: This is only returning the trainings from the registered models, not the training runs from the experiments
     try:
-        history = ml_model_service.get_training_history(model_name, limit)
+        history = ml_model_service.get_model_training_history(model_name, limit)
+        return {"training_history": history, "total_count": len(history)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting model training history: {str(e)}")
+
+@router.get("/{model_name}/latest-training", response_model=ModelTrainingHistory)
+async def get_latest_model_training(model_name: str):
+    """Get the most recent training run for a model."""
+    try:
+        latest_model_training = ml_model_service.get_model_latest_training(model_name)
+        if not latest_model_training:
+            raise HTTPException(status_code=404, detail=f"No training history found for model '{model_name}'")
+        return latest_model_training
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting latest model training: {str(e)}")
+
+@router.get("/experiments/history")
+async def get_experiments_training_history(
+    limit: int = Query(default=10, ge=1, le=100)
+):
+    """Get training history for all experiments."""
+    try:
+        history = ml_model_service.get_experiment_history(limit)
         return {"training_history": history, "total_count": len(history)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting training history: {str(e)}")
 
-@router.get("/{model_name}/latest-training", response_model=TrainingHistory)
-async def get_latest_training(model_name: str):
-    """Get the most recent training run for a model."""
-    # FIXME: This is only returning the trainings from the registered models, not the training runs from the experiments
+@router.get("/experiments/latest", response_model=ExperimentHistory)
+async def get_latest_experiment():
+    """Get the most recent training run (experiment)."""
     try:
-        latest_training = ml_model_service.get_latest_training(model_name)
-        if not latest_training:
-            raise HTTPException(status_code=404, detail=f"No training history found for model '{model_name}'")
-        return latest_training
+        latest_experiment = ml_model_service.get_latest_experiment()
+        if not latest_experiment:
+            raise HTTPException(status_code=404, detail=f"No experiment found'")
+        return latest_experiment
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting latest training: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting latest experiment: {str(e)}")
 
 @router.get("/predictions/history", response_model=PredictionHistory)
 async def get_prediction_history(

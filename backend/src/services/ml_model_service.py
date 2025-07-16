@@ -13,7 +13,7 @@ import requests
 from ..flows.training_flow import ml_pipeline_flow
 from ..training_script.training_script import load_data, process_data, train_model
 from ..schemas.model_schemas import (
-    ModelVersionResponse, ModelMetrics, ModelInfo, TrainingHistory, 
+    ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
     PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary
 )
 
@@ -351,10 +351,10 @@ def get_current_model_info(model_name: str) -> Optional[ModelInfo]:
         print(f"Error getting current model info: {e}")
         return None
 
-def get_training_history(model_name: str, limit: int = 10) -> List[TrainingHistory]:
+def get_model_training_history(model_name: str, limit: int = 10) -> List[ModelTrainingHistory]:
     """Get training history for a model."""
     client = MlflowClient()
-    training_history = []
+    model_training_history = []
     
     try:
         model_versions = client.search_model_versions(f"name='{model_name}'")
@@ -366,7 +366,7 @@ def get_training_history(model_name: str, limit: int = 10) -> List[TrainingHisto
                 run = mlflow.get_run(version.run_id)
                 metrics = get_model_metrics(version.run_id)
                 
-                training_history.append(TrainingHistory(
+                model_training_history.append(ModelTrainingHistory(
                     run_id=version.run_id,
                     run_name=run.data.tags.get('mlflow.runName'),
                     start_time=run.info.start_time,
@@ -379,13 +379,75 @@ def get_training_history(model_name: str, limit: int = 10) -> List[TrainingHisto
                 print(f"Error processing version {version.version}: {e}")
                 continue
     except Exception as e:
+        print(f"Error getting model training history: {e}")
+    
+    return model_training_history
+
+def get_model_latest_training(model_name: str) -> Optional[ModelTrainingHistory]:
+    """Get the most recent training run for a model."""
+    history = get_model_training_history(model_name, limit=1)
+    return history[0] if history else None
+
+
+def get_experiment_history(limit: int = 10, experiment_name: Optional[str] = None) -> List[ExperimentHistory]:
+    """Get training history from MLflow experiment runs."""
+    experiment_history = []
+    
+    try:
+        experiment_ids = []
+        experiment_map = {}
+
+        if experiment_name:
+            exp = mlflow.get_experiment_by_name(experiment_name)
+            if not exp or exp.name == PREDICTION_EXPERIMENT_NAME:
+                return []
+            experiment_ids = [exp.experiment_id]
+            experiment_map[exp.experiment_id] = exp.name
+        else:
+            all_experiments = mlflow.search_experiments()
+            for exp in all_experiments:
+                if exp.name != PREDICTION_EXPERIMENT_NAME:
+                    experiment_ids.append(exp.experiment_id)
+                    experiment_map[exp.experiment_id] = exp.name
+
+        if not experiment_ids:
+            return []
+
+        runs = mlflow.search_runs(
+            experiment_ids=experiment_ids,
+            order_by=["start_time DESC"],
+            max_results=limit,
+            output_format="list"
+        )
+        
+        print(f"runs: {runs}")
+        for run in runs:
+            try:
+                metrics = get_model_metrics(run.info.run_id)
+                
+                experiment_history.append(ExperimentHistory(
+                    run_id=run.info.run_id,
+                    run_name=run.data.tags.get('mlflow.runName', ''),
+                    experiment_id=run.info.experiment_id,
+                    experiment_name=experiment_map.get(run.info.experiment_id, 'Unknown'),
+                    start_time=run.info.start_time,
+                    end_time=run.info.end_time,
+                    status=run.info.status,
+                    metrics=metrics,
+                    artifact_uri=run.info.artifact_uri,
+                    tags=run.data.tags
+                ))
+            except Exception as e:
+                print(f"Error processing run {run.info.run_id}: {e}")
+                continue
+    except Exception as e:
         print(f"Error getting training history: {e}")
     
-    return training_history
+    return experiment_history
 
-def get_latest_training(model_name: str) -> Optional[TrainingHistory]:
-    """Get the most recent training run for a model."""
-    history = get_training_history(model_name, limit=1)
+def get_latest_experiment() -> Optional[ExperimentHistory]:
+    """Get the most recent experiment run."""
+    history = get_experiment_history(limit=1)
     return history[0] if history else None
 
 def get_prediction_history(limit: int = 50, offset: int = 0) -> PredictionHistory:
@@ -436,7 +498,7 @@ def get_dashboard_summary() -> DashboardSummary:
             try:
                 production_version = None
                 current_metrics = None
-                latest_training = None
+                latest_model_training = None
                 
                 try:
                     prod_model = client.get_model_version_by_alias(name=model.name, alias="production")
@@ -445,11 +507,11 @@ def get_dashboard_summary() -> DashboardSummary:
                 except:
                     pass
                 
-                latest_training = get_latest_training(model.name)
-                if latest_training:
-                    if latest_training.start_time:
+                latest_model_training = get_model_latest_training(model.name)
+                if latest_model_training:
+                    if latest_model_training.start_time:
                         try:
-                            start_time_seconds = latest_training.start_time
+                            start_time_seconds = latest_model_training.start_time
                             if start_time_seconds > 1e12:
                                 start_time_seconds = start_time_seconds / 1000
                             start_time = datetime.fromtimestamp(start_time_seconds)
@@ -464,7 +526,7 @@ def get_dashboard_summary() -> DashboardSummary:
                     model_name=model.name,
                     production_version=production_version,
                     total_versions=len(versions),
-                    latest_training=latest_training,
+                    latest_model_training=latest_model_training,
                     current_metrics=current_metrics,
                     description=model.description
                 ))
