@@ -28,6 +28,13 @@ export const modelService = {
     return response.data;
   },
 
+  getExperimentHistory: async (limit = 10) => {
+    const response = await api.get('/api/models/experiments/history', {
+      params: { limit },
+    });
+    return response.data;
+  },
+
   // Start model training
   trainModel: async () => {
     const response = await api.post('/api/models/train');

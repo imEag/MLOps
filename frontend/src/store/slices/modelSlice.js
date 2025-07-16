@@ -57,6 +57,18 @@ export const fetchTrainingHistory = createAsyncThunk(
   },
 );
 
+export const fetchExperimentHistory = createAsyncThunk(
+  'model/fetchExperimentHistory',
+  async ({ limit = 10 }, { rejectWithValue }) => {
+    try {
+      const data = await modelService.getExperimentHistory(limit);
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 export const fetchAvailableModels = createAsyncThunk(
   'model/fetchAvailableModels',
   async (_, { rejectWithValue }) => {
@@ -104,6 +116,7 @@ const initialState = {
   currentModel: null,
   latestTraining: null,
   trainingHistory: [],
+  experimentHistory: [],
   availableModels: [],
   modelVersions: [],
   loading: false,
@@ -183,6 +196,20 @@ const modelSlice = createSlice({
         state.trainingHistory = action.payload.training_history || [];
       })
       .addCase(fetchTrainingHistory.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Fetch experiment history
+      .addCase(fetchExperimentHistory.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchExperimentHistory.fulfilled, (state, action) => {
+        state.loading = false;
+        state.experimentHistory = action.payload.training_history?.runs || [];
+        console.log(state.experimentHistory);
+        console.log(JSON.stringify(state.experimentHistory));
+      })
+      .addCase(fetchExperimentHistory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

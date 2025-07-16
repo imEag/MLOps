@@ -22,6 +22,7 @@ import {
 } from '@/store/slices/modelSlice';
 import CurrentModelInfo from '@/components/model-management/CurrentModelInfo';
 import TrainingHistory from '@/components/model-management/TrainingHistory';
+import ExperimentHistory from '@/components/model-management/ExperimentHistory';
 import ModelVersions from '@/components/model-management/ModelVersions';
 import { useIsMobile } from '@/hooks/useBreakpoint';
 
@@ -128,6 +129,9 @@ const ModelManagement = () => {
           </Col>
           <Col xs={24}>
             <TrainingHistory modelName={selectedModelName} />
+          </Col>
+          <Col xs={24}>
+            <ExperimentHistory />
           </Col>
         </Row>
       ) : (

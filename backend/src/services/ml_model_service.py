@@ -14,7 +14,7 @@ from ..flows.training_flow import ml_pipeline_flow
 from ..training_script.training_script import load_data, process_data, train_model
 from ..schemas.model_schemas import (
     ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
-    PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary
+    PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary, ParentExperimentHistory
 )
 
 # Prediction experiment name for MLflow
@@ -389,10 +389,8 @@ def get_model_latest_training(model_name: str) -> Optional[ModelTrainingHistory]
     return history[0] if history else None
 
 
-def get_experiment_history(limit: int = 10, experiment_name: Optional[str] = None) -> List[ExperimentHistory]:
-    """Get training history from MLflow experiment runs."""
-    experiment_history = []
-    
+def get_experiment_history(limit: int = 10, offset: int = 0, experiment_name: Optional[str] = None) -> dict:
+    """Get and group training history from MLflow experiment runs."""
     try:
         experiment_ids = []
         experiment_map = {}
@@ -400,7 +398,7 @@ def get_experiment_history(limit: int = 10, experiment_name: Optional[str] = Non
         if experiment_name:
             exp = mlflow.get_experiment_by_name(experiment_name)
             if not exp or exp.name == PREDICTION_EXPERIMENT_NAME:
-                return []
+                return {"runs": [], "total_count": 0}
             experiment_ids = [exp.experiment_id]
             experiment_map[exp.experiment_id] = exp.name
         else:
@@ -411,21 +409,43 @@ def get_experiment_history(limit: int = 10, experiment_name: Optional[str] = Non
                     experiment_map[exp.experiment_id] = exp.name
 
         if not experiment_ids:
-            return []
+            return {"runs": [], "total_count": 0}
 
-        runs = mlflow.search_runs(
+        # Fetch all runs to build the hierarchy, this could be memory intensive
+        all_runs = mlflow.search_runs(
             experiment_ids=experiment_ids,
-            order_by=["start_time DESC"],
-            max_results=limit,
-            output_format="list"
+            output_format="list",
+            max_results=50000  # A high number to get all runs
         )
-        
-        print(f"runs: {runs}")
-        for run in runs:
-            try:
+
+        parent_runs = {}
+        child_runs = []
+
+        for run in all_runs:
+            if 'mlflow.parentRunId' not in run.data.tags:
                 metrics = get_model_metrics(run.info.run_id)
-                
-                experiment_history.append(ExperimentHistory(
+                parent_run = ParentExperimentHistory(
+                    run_id=run.info.run_id,
+                    run_name=run.data.tags.get('mlflow.runName', ''),
+                    experiment_id=run.info.experiment_id,
+                    experiment_name=experiment_map.get(run.info.experiment_id, 'Unknown'),
+                    start_time=run.info.start_time,
+                    end_time=run.info.end_time,
+                    status=run.info.status,
+                    metrics=metrics,
+                    artifact_uri=run.info.artifact_uri,
+                    tags=run.data.tags,
+                    child_runs=[]
+                )
+                parent_runs[run.info.run_id] = parent_run
+            else:
+                child_runs.append(run)
+
+        for run in child_runs:
+            parent_id = run.data.tags.get('mlflow.parentRunId')
+            if parent_id in parent_runs:
+                metrics = get_model_metrics(run.info.run_id)
+                child_run_obj = ExperimentHistory(
                     run_id=run.info.run_id,
                     run_name=run.data.tags.get('mlflow.runName', ''),
                     experiment_id=run.info.experiment_id,
@@ -436,19 +456,27 @@ def get_experiment_history(limit: int = 10, experiment_name: Optional[str] = Non
                     metrics=metrics,
                     artifact_uri=run.info.artifact_uri,
                     tags=run.data.tags
-                ))
-            except Exception as e:
-                print(f"Error processing run {run.info.run_id}: {e}")
-                continue
+                )
+                parent_runs[parent_id].child_runs.append(child_run_obj)
+        
+        # Sort parent runs by start time
+        sorted_parent_runs = sorted(parent_runs.values(), key=lambda x: x.start_time, reverse=True)
+        
+        # Paginate
+        total_count = len(sorted_parent_runs)
+        paginated_runs = sorted_parent_runs[offset : offset + limit]
+
+        return {"runs": paginated_runs, "total_count": total_count}
+
     except Exception as e:
-        print(f"Error getting training history: {e}")
-    
-    return experiment_history
+        print(f"Error getting experiment history: {e}")
+        return {"runs": [], "total_count": 0}
+
 
 def get_latest_experiment() -> Optional[ExperimentHistory]:
     """Get the most recent experiment run."""
-    history = get_experiment_history(limit=1)
-    return history[0] if history else None
+    history_data = get_experiment_history(limit=1)
+    return history_data["runs"][0] if history_data["runs"] else None
 
 def get_prediction_history(limit: int = 50, offset: int = 0) -> PredictionHistory:
     """Get prediction history from storage."""

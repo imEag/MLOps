@@ -76,6 +76,15 @@ class PredictionHistory(BaseModel):
     predictions: List[PredictionResponse]
     total_count: int
 
+class ParentExperimentHistory(ExperimentHistory):
+    child_runs: List[ExperimentHistory] = []
+
+class GroupedExperimentHistoryResponse(BaseModel):
+    runs: List[ParentExperimentHistory]
+    total_count: int
+    next_page: Optional[str] = None
+    previous_page: Optional[str] = None
+
 class ModelSummary(BaseModel):
     model_name: str
     production_version: Optional[str] = None
