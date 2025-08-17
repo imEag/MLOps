@@ -1,4 +1,7 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
+
+# Build arguments to control optional behaviors
+ARG SOVAHARMONY_MODE=wheel  # values: wheel | editable
 
 WORKDIR /app
 
@@ -22,6 +25,18 @@ RUN poetry config virtualenvs.create false \
 
 # Copy the rest of the application
 COPY . .
+
+# Install internal vendored wheel(s) if present
+COPY vendor /app/vendor
+RUN python -m pip install --upgrade pip \
+ && echo "Installing sovaharmony mode=$SOVAHARMONY_MODE" \
+ && if [ "$SOVAHARMONY_MODE" = "editable" ] && [ -d /app/vendor/sovaharmony ]; then \
+        pip install --no-deps -e /app/vendor/sovaharmony ; \
+    elif ls /app/vendor/sovaharmony-*.whl 1> /dev/null 2>&1; then \
+        pip install /app/vendor/sovaharmony-*.whl ; \
+    else \
+        echo "No sovaharmony artifact found (wheel or source)" ; \
+    fi
 
 # Set environment variables
 ENV PYTHONPATH=/app
