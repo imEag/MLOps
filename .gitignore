@@ -370,3 +370,7 @@ pids
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# test data
+
+backend/data/no processed/database_bids
