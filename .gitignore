@@ -371,6 +371,6 @@ pids
 .yarn/install-state.gz
 .pnp.*
 
-# test data
-
-backend/data/no processed/database_bids
+# data
+backend/data/uploads/
+backend/data/no processed/database_bids*
