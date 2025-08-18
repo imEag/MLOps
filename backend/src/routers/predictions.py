@@ -22,14 +22,11 @@ async def upload_file(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, file_object)
 
         with zipfile.ZipFile(file_location, 'r') as zip_ref:
-            extract_path = os.path.join(UPLOAD_DIRECTORY, os.path.splitext(file.filename)[0])
-            if not os.path.exists(extract_path):
-                os.makedirs(extract_path)
-            zip_ref.extractall(extract_path)
+            zip_ref.extractall(UPLOAD_DIRECTORY)
 
         os.remove(file_location)
 
-        return JSONResponse(status_code=200, content={"message": "File uploaded and decompressed successfully.", "path": extract_path})
+        return JSONResponse(status_code=200, content={"message": "File uploaded and decompressed successfully.", "path": UPLOAD_DIRECTORY})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
