@@ -1,14 +1,57 @@
-import { InboxOutlined } from '@ant-design/icons';
-import { Button, Typography, Upload, message } from 'antd';
-import { useState } from 'react';
+import { InboxOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  Button,
+  Typography,
+  Upload,
+  message,
+  Tree,
+  Spin,
+  Popconfirm,
+} from 'antd';
+import { useState, useEffect } from 'react';
 import { predictionService } from '../../services/predictionService';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
+const { DirectoryTree } = Tree;
 
 const Predictions = () => {
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [treeData, setTreeData] = useState([]);
+  const [loadingTree, setLoadingTree] = useState(false);
+  const [selectedKey, setSelectedKey] = useState(null);
+  const [selectedNodeTitle, setSelectedNodeTitle] = useState('');
+
+  const fetchFiles = async () => {
+    setLoadingTree(true);
+    try {
+      const response = await predictionService.getFiles();
+      setTreeData(response.data);
+    } catch (error) {
+      message.error('Failed to fetch file list.');
+    } finally {
+      setLoadingTree(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  const handleDelete = async () => {
+    if (!selectedKey) return;
+    try {
+      await predictionService.deleteFile(selectedKey);
+      message.success('File or folder deleted successfully.');
+      setSelectedKey(null); // Reset selection
+      setSelectedNodeTitle('');
+      fetchFiles(); // Refresh file list
+    } catch (error) {
+      message.error('Failed to delete file or folder.');
+    }
+  };
+
   const handleUpload = async () => {
     if (fileList.length === 0) {
       return;
@@ -18,6 +61,7 @@ const Predictions = () => {
       await predictionService.uploadFile(fileList[0]);
       setFileList([]);
       message.success('Upload successfully.');
+      fetchFiles(); // Refresh file list after upload
     } catch (error) {
       message.error('Upload failed.');
     } finally {
@@ -30,7 +74,8 @@ const Predictions = () => {
       setFileList([]);
     },
     beforeUpload: (file) => {
-      const isZip = file.type === 'application/zip' || file.name.endsWith('.zip');
+      const isZip =
+        file.type === 'application/zip' || file.name.endsWith('.zip');
       if (!isZip) {
         message.error('You can only upload .zip files!');
       } else {
@@ -41,6 +86,16 @@ const Predictions = () => {
     fileList,
     multiple: false,
     accept: '.zip',
+  };
+
+  const handleSelect = (keys, { node }) => {
+    if (keys.length > 0) {
+      setSelectedKey(keys[0]);
+      setSelectedNodeTitle(node.title);
+    } else {
+      setSelectedKey(null);
+      setSelectedNodeTitle('');
+    }
   };
 
   return (
@@ -72,6 +127,39 @@ const Predictions = () => {
       >
         {uploading ? 'Uploading' : 'Start Upload'}
       </Button>
+
+      <div className="uploaded-files-container">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Title level={3}>Uploaded Files</Title>
+          <Popconfirm
+            title={`Are you sure you want to delete "${selectedNodeTitle}"?`}
+            onConfirm={handleDelete}
+            okText="Yes"
+            cancelText="No"
+            disabled={!selectedKey}
+          >
+            <Button
+              icon={<DeleteOutlined />}
+              type="primary"
+              danger
+              disabled={!selectedKey}
+            >
+              Delete
+            </Button>
+          </Popconfirm>
+        </div>
+        {loadingTree ? (
+          <Spin />
+        ) : (
+          <DirectoryTree treeData={treeData} onSelect={handleSelect} />
+        )}
+      </div>
     </div>
   );
 };

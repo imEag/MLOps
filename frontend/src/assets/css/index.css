@@ -1,0 +1,55 @@
+.uploaded-files-container {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+  background-color: #fafafa;
+}
+
+.uploaded-files-container * {
+  transition: background-color 0s, color 0s !important;
+}
+
+.uploaded-files-container .ant-tree {
+  background-color: transparent;
+  font-size: 14px;
+}
+
+.ant-tree-list,
+.ant-tree-list-holder-inner {
+  width: 100%;
+}
+
+.uploaded-files-container .ant-tree .ant-tree-treenode {
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+
+.uploaded-files-container .ant-tree .ant-tree-treenode {
+  border-radius: 4px;
+  transition: background-color 0s, color 0s;
+}
+
+.uploaded-files-container .ant-tree .ant-tree-treenode:hover {
+  background-color: #e8e8e8;
+  color: black;
+}
+
+.uploaded-files-container
+  .ant-tree
+  .ant-tree-treenode.ant-tree-treenode-selected {
+  background-color: #1890ff;
+  color: white;
+}
+
+.uploaded-files-container .ant-tree {
+  display: flex;
+  align-items: center;
+}
+
+.ant-tree-node-content-wrapper:hover {
+  background-color: transparent !important;
+  color: inherit !important;
+}
