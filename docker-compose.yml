@@ -70,8 +70,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.fastapi
-      args:
-        SOVAHARMONY_MODE: "editable"
     ports:
       - "${FASTAPI_PORT:-8000}:8000"
     volumes:
