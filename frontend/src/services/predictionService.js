@@ -17,4 +17,7 @@ export const predictionService = {
   deleteFile: (path) => {
     return api.delete('/predictions/files/', { params: { path } });
   },
+  makePrediction: (path) => {
+    return api.post('/predictions/predict/', { path });
+  },
 };

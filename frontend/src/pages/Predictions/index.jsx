@@ -10,6 +10,7 @@ import {
 } from 'antd';
 import { useState, useEffect } from 'react';
 import { predictionService } from '../../services/predictionService';
+import { useIsMobile } from '../../hooks/useBreakpoint';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -22,6 +23,8 @@ const Predictions = () => {
   const [loadingTree, setLoadingTree] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [selectedNodeTitle, setSelectedNodeTitle] = useState('');
+  const [predicting, setPredicting] = useState(false);
+  const isMobile = useIsMobile();
 
   const fetchFiles = async () => {
     setLoadingTree(true);
@@ -49,6 +52,21 @@ const Predictions = () => {
       fetchFiles(); // Refresh file list
     } catch (error) {
       message.error('Failed to delete file or folder.');
+    }
+  };
+
+  const handleMakePrediction = async () => {
+    if (!selectedKey) return;
+    setPredicting(true);
+    try {
+      await predictionService.makePrediction(selectedKey);
+      message.success(
+        'Prediction started successfully. You can see the results in the dashboard.',
+      );
+    } catch (error) {
+      message.error('Failed to start prediction.');
+    } finally {
+      setPredicting(false);
     }
   };
 
@@ -134,25 +152,52 @@ const Predictions = () => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            marginBottom: '16px'
           }}
         >
           <Title level={3}>Uploaded Files</Title>
-          <Popconfirm
-            title={`Are you sure you want to delete "${selectedNodeTitle}"?`}
-            onConfirm={handleDelete}
-            okText="Yes"
-            cancelText="No"
-            disabled={!selectedKey}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '8px',
+              alignItems: isMobile ? 'flex-end' : 'center',
+            }}
           >
-            <Button
-              icon={<DeleteOutlined />}
-              type="primary"
-              danger
+            <Popconfirm
+              title={`Are you sure you want to make a prediction with "${selectedNodeTitle}"?`}
+              onConfirm={handleMakePrediction}
+              okText="Yes"
+              cancelText="No"
+              disabled={!selectedKey || predicting}
+            >
+              <Button
+                type="primary"
+                disabled={!selectedKey || predicting}
+                loading={predicting}
+                style={{ width: isMobile ? '100%' : 'auto' }}
+              >
+                Make Prediction
+              </Button>
+            </Popconfirm>
+            <Popconfirm
+              title={`Are you sure you want to delete "${selectedNodeTitle}"?`}
+              onConfirm={handleDelete}
+              okText="Yes"
+              cancelText="No"
               disabled={!selectedKey}
             >
-              Delete
-            </Button>
-          </Popconfirm>
+              <Button
+                icon={<DeleteOutlined />}
+                type="primary"
+                danger
+                disabled={!selectedKey}
+                style={{ width: isMobile ? '100%' : 'auto' }}
+              >
+                Delete
+              </Button>
+            </Popconfirm>
+          </div>
         </div>
         {loadingTree ? (
           <Spin />
