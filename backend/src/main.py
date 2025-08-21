@@ -65,6 +65,6 @@ async def health_check():
     print("=== HEALTH CHECK ENDPOINT CALLED ===")
     return {"status": "healthy", "mlflow_uri": MLFLOW_TRACKING_URI}
 
-from .routers import files, models_router
+from .routers import files_router, models_router
 app.include_router(models_router.router)
-app.include_router(files.router, prefix="/files", tags=["files"])
+app.include_router(files_router.router)

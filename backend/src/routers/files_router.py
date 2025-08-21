@@ -4,7 +4,10 @@ import zipfile
 from fastapi import APIRouter, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 
-router = APIRouter()
+router = APIRouter(
+  prefix="/files",
+  tags=["files"]
+)
 
 UPLOAD_DIRECTORY = "/app/data/uploads"
 if not os.path.exists(UPLOAD_DIRECTORY):

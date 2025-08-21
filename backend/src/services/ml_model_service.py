@@ -11,7 +11,7 @@ import os
 import requests
 
 from ..flows.training_flow import ml_pipeline_flow
-from ..training_script.training_script import load_data, process_data, train_model
+from ..custom_scripts.training_script import load_data, process_data, train_model
 from ..schemas.model_schemas import (
     ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
     PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary, ParentExperimentHistory
@@ -388,7 +388,6 @@ def get_model_latest_training(model_name: str) -> Optional[ModelTrainingHistory]
     history = get_model_training_history(model_name, limit=1)
     return history[0] if history else None
 
-
 def get_experiment_history(limit: int = 10, offset: int = 0, experiment_name: Optional[str] = None) -> dict:
     """Get and group training history from MLflow experiment runs."""
     try:
@@ -471,7 +470,6 @@ def get_experiment_history(limit: int = 10, offset: int = 0, experiment_name: Op
     except Exception as e:
         print(f"Error getting experiment history: {e}")
         return {"runs": [], "total_count": 0}
-
 
 def get_latest_experiment() -> Optional[ExperimentHistory]:
     """Get the most recent experiment run."""
