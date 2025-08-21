@@ -16,6 +16,7 @@ from ..schemas.model_schemas import (
     ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
     PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary, ParentExperimentHistory
 )
+from ..custom_scripts.data_preprocessing_script import process_data as process_data_for_prediction
 
 # Prediction experiment name for MLflow
 PREDICTION_EXPERIMENT_NAME = "Model_Predictions"
@@ -245,8 +246,8 @@ def get_production_model_input_example(model_name: str):
     raise e
   except Exception as e:
     raise e
-    
-def predict(model_name: str, data: dict):
+
+def predict(model_name: str, data_path: str):
   """ Do a prediction using the production model """
   client = MlflowClient()
   try:
@@ -272,13 +273,29 @@ def predict(model_name: str, data: dict):
         raise ValueError("Could not retrieve valid input example columns for the model from MLflow.")
         
     columns_ordered = input_example_info["dataframe_split"]["columns"]
-    
+
+    data = process_data_for_prediction(data_path)
+
     try:
-        df_to_predict = pd.DataFrame([data], columns=columns_ordered)
+        # Build a DataFrame from the processed input (handle dict, list of dicts, DataFrame, array)
+        # Ensure we have a pandas DataFrame to work with
+        if isinstance(data, pd.DataFrame):
+          df = data.copy()
+        else:
+          df = pd.DataFrame(data).copy()
+        
+        # Ensure all expected columns exist — create missing ones filled with zeros
+        for col in columns_ordered:
+            if col not in df.columns:
+              df[col] = 0
+
+        # Reorder/keep only the expected columns
+        df_to_predict = df[columns_ordered]
+        print(f"DataFrame to predict: {df_to_predict}")
     except Exception as e:
         raise ValueError(f"Error creating DataFrame from input data: {str(e)}. Ensure data is a flat dictionary of features.")
 
-    prediction_result = model.predict(df_to_predict)
+    prediction_result = model.predict(df_to_predict.values)
     
     if hasattr(prediction_result, 'tolist'):
         output = prediction_result.tolist()
@@ -290,16 +307,10 @@ def predict(model_name: str, data: dict):
     else:
         prediction = output
     
-    # Store prediction in memory (replace with database in production)
-    prediction_record = PredictionResponse(
-        prediction=prediction,
-        model_name=model_name,
-        model_version=str(prod_model_version.version),
-        timestamp=datetime.now(),
-        input_data=data
-    )
+    # Log prediction to MLflow (replace in-memory record with persistent logging)
     _log_prediction_to_mlflow(prediction, model_name, str(prod_model_version.version), data)
-    
+
+    print(f'Prediction for {model_name}: {prediction}')
     return prediction
     
   except MlflowException as e:

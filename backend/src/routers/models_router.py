@@ -63,12 +63,15 @@ async def get_production_input_example_endpoint(model_name: str):
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching input example: {str(e)}")
       
 @router.post("/{model_name}/predict")
-async def predict(model_name: str, data: dict):
+async def predict(model_name: str, data_path: str, background_tasks: BackgroundTasks):
   try:
-    prediction = ml_model_service.predict(model_name, data)
-    return prediction
+    background_tasks.add_task(ml_model_service.predict, model_name, data_path)
+    return {"message": "Prediction initiated in the background.", "flow_state": "STARTED"}
+  except ImportError as e:
+    raise HTTPException(status_code=500, detail=f"Error during prediction (possibly import-related from service): {str(e)}")
   except Exception as e:
-    raise HTTPException(status_code=500, detail=f"An unexpected error occurred while predicting: {str(e)}")
+    raise HTTPException(status_code=500, detail=f"Error initiating prediction: {str(e)}")
+
 
 @router.get("/dashboard", response_model=DashboardSummary)
 async def get_dashboard_summary():
