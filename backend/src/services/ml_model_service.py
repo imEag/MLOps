@@ -295,6 +295,7 @@ def predict(model_name: str, data_path: str):
     except Exception as e:
         raise ValueError(f"Error creating DataFrame from input data: {str(e)}. Ensure data is a flat dictionary of features.")
 
+    print(f"DataFrame to predict values: {df_to_predict.values}")
     prediction_result = model.predict(df_to_predict.values)
     
     if hasattr(prediction_result, 'tolist'):
@@ -307,10 +308,8 @@ def predict(model_name: str, data_path: str):
     else:
         prediction = output
     
-    # Log prediction to MLflow (replace in-memory record with persistent logging)
     _log_prediction_to_mlflow(prediction, model_name, str(prod_model_version.version), data)
 
-    print(f'Prediction for {model_name}: {prediction}')
     return prediction
     
   except MlflowException as e:

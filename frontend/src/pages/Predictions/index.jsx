@@ -10,7 +10,9 @@ import {
 } from 'antd';
 import { useState, useEffect } from 'react';
 import { fileService } from '../../services/fileService';
+import { modelService } from '../../services/modelService';
 import { useIsMobile } from '../../hooks/useBreakpoint';
+import PredictionModal from '../../components/predictions/PredictionModal';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -24,6 +26,7 @@ const Predictions = () => {
   const [selectedKey, setSelectedKey] = useState(null);
   const [selectedNodeTitle, setSelectedNodeTitle] = useState('');
   const [predicting, setPredicting] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const isMobile = useIsMobile();
 
   const fetchFiles = async () => {
@@ -55,13 +58,18 @@ const Predictions = () => {
     }
   };
 
-  const handleMakePrediction = async () => {
+  const handleMakePrediction = () => {
     if (!selectedKey) return;
+    setIsModalVisible(true);
+  };
+
+  const handleConfirmPrediction = async (modelName, dataPath) => {
     setPredicting(true);
+    setIsModalVisible(false);
     try {
-      await fileService.makePrediction(selectedKey);
+      await modelService.predict(modelName, dataPath);
       message.success(
-        'Prediction started successfully. You can see the results in the dashboard.',
+        'Prediction started successfully. You can see the results in the prediction history section.',
       );
     } catch (error) {
       message.error('Failed to start prediction.');
@@ -164,22 +172,15 @@ const Predictions = () => {
               alignItems: isMobile ? 'flex-end' : 'center',
             }}
           >
-            <Popconfirm
-              title={`Are you sure you want to make a prediction with "${selectedNodeTitle}"?`}
-              onConfirm={handleMakePrediction}
-              okText="Yes"
-              cancelText="No"
+            <Button
+              type="primary"
+              onClick={handleMakePrediction}
               disabled={!selectedKey || predicting}
+              loading={predicting}
+              style={{ width: isMobile ? '100%' : 'auto' }}
             >
-              <Button
-                type="primary"
-                disabled={!selectedKey || predicting}
-                loading={predicting}
-                style={{ width: isMobile ? '100%' : 'auto' }}
-              >
-                Make Prediction
-              </Button>
-            </Popconfirm>
+              Make Prediction
+            </Button>
             <Popconfirm
               title={`Are you sure you want to delete "${selectedNodeTitle}"?`}
               onConfirm={handleDelete}
@@ -205,6 +206,12 @@ const Predictions = () => {
           <DirectoryTree treeData={treeData} onSelect={handleSelect} />
         )}
       </div>
+      <PredictionModal
+        visible={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        onConfirm={handleConfirmPrediction}
+        filePath={selectedKey}
+      />
     </div>
   );
 };

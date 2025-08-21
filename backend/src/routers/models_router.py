@@ -72,7 +72,6 @@ async def predict(model_name: str, data_path: str, background_tasks: BackgroundT
   except Exception as e:
     raise HTTPException(status_code=500, detail=f"Error initiating prediction: {str(e)}")
 
-
 @router.get("/dashboard", response_model=DashboardSummary)
 async def get_dashboard_summary():
     """Get dashboard summary with all registered models and recent activity."""
