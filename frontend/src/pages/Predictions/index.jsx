@@ -9,7 +9,7 @@ import {
   Popconfirm,
 } from 'antd';
 import { useState, useEffect } from 'react';
-import { predictionService } from '../../services/predictionService';
+import { fileService } from '../../services/fileService';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 
 const { Title, Text } = Typography;
@@ -29,7 +29,7 @@ const Predictions = () => {
   const fetchFiles = async () => {
     setLoadingTree(true);
     try {
-      const response = await predictionService.getFiles();
+      const response = await fileService.getFiles();
       setTreeData(response.data);
     } catch (error) {
       message.error('Failed to fetch file list.');
@@ -45,7 +45,7 @@ const Predictions = () => {
   const handleDelete = async () => {
     if (!selectedKey) return;
     try {
-      await predictionService.deleteFile(selectedKey);
+      await fileService.deleteFile(selectedKey);
       message.success('File or folder deleted successfully.');
       setSelectedKey(null); // Reset selection
       setSelectedNodeTitle('');
@@ -59,7 +59,7 @@ const Predictions = () => {
     if (!selectedKey) return;
     setPredicting(true);
     try {
-      await predictionService.makePrediction(selectedKey);
+      await fileService.makePrediction(selectedKey);
       message.success(
         'Prediction started successfully. You can see the results in the dashboard.',
       );
@@ -76,7 +76,7 @@ const Predictions = () => {
     }
     setUploading(true);
     try {
-      await predictionService.uploadFile(fileList[0]);
+      await fileService.uploadFile(fileList[0]);
       setFileList([]);
       message.success('Upload successfully.');
       fetchFiles(); // Refresh file list after upload

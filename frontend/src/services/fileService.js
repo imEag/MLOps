@@ -1,10 +1,10 @@
 import api from './api';
 
-export const predictionService = {
+export const fileService = {
   uploadFile: (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/predictions/upload/', formData, {
+    return api.post('/files/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -12,10 +12,10 @@ export const predictionService = {
     });
   },
   getFiles: () => {
-    return api.get('/predictions/files/');
+    return api.get('/files/');
   },
   deleteFile: (path) => {
-    return api.delete('/predictions/files/', { params: { path } });
+    return api.delete('/files/', { params: { path } });
   },
   makePrediction: (path) => {
     return api.post('/predictions/predict/', { path });

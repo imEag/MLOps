@@ -10,7 +10,7 @@ UPLOAD_DIRECTORY = "/app/data/uploads"
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
-@router.post("/upload/")
+@router.post("/")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .zip file.")
@@ -48,7 +48,7 @@ def get_directory_tree(path):
             })
     return tree
 
-@router.get("/files/")
+@router.get("/")
 async def get_files():
     try:
         tree = get_directory_tree(UPLOAD_DIRECTORY)
@@ -56,7 +56,7 @@ async def get_files():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-@router.delete("/files/")
+@router.delete("/")
 async def delete_file(path: str):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
