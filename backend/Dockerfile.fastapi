@@ -26,8 +26,7 @@ RUN poetry config virtualenvs.create false \
 # Copy the rest of the application
 COPY . .
 
-# Install internal vendored wheel(s) if present
-COPY vendor /app/vendor
+
 RUN python -m pip install --upgrade pip && \
     pip install -e /app/vendor/sovaharmony
 
@@ -40,4 +39,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
 # Run FastAPI with uvicorn
-CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug", "--access-log"] 
+CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug", "--access-log"]
