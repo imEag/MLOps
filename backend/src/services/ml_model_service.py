@@ -6,11 +6,13 @@ import json
 import pickle
 import pandas as pd 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Callable, Tuple
 import os
 import requests
+import tempfile
 
 from ..flows.training_flow import ml_pipeline_flow
+from ..flows import ml_prediction_flow
 from ..custom_scripts.training_script import load_data, process_data, train_model
 from ..schemas.model_schemas import (
     ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
@@ -205,6 +207,41 @@ def run_ml_training_pipeline():
     )
     print("ML training pipeline flow finished in service.")
     return flow_state
+
+def _preprocess_to_df_path(input_path: str) -> str:
+    """Default preprocess adapter: uses existing process_data_for_prediction, materializes a DataFrame to a temp file, and returns its path.
+
+    This keeps the new prediction flow contract (function returns a path to a DataFrame) without changing existing preprocessing code.
+    """
+    data = process_data_for_prediction(input_path)
+    if isinstance(data, pd.DataFrame):
+        df = data.copy()
+    else:
+        df = pd.DataFrame(data).copy()
+
+    # Persist to a temp pickle to preserve dtypes
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pkl")
+    tmp.close()
+    df.to_pickle(tmp.name)
+    return tmp.name
+
+def run_ml_prediction_pipeline(model_name: str, input_path: str, preprocess_func: Optional[Callable] = None, preprocess_args: Tuple = (), preprocess_kwargs: Optional[dict] = None):
+    """Runs the ML prediction flow using Prefect.
+
+    - preprocess_func must accept input_path= and return a path to a DataFrame file. If None, uses the default adapter that wraps process_data_for_prediction.
+    - Returns the flow's small payload with prediction, run_id, and model_version.
+    """
+    if preprocess_func is None:
+        preprocess_func = _preprocess_to_df_path
+    preprocess_kwargs = preprocess_kwargs or {}
+
+    return ml_prediction_flow(
+        preprocess_func=preprocess_func,
+        input_path=input_path,
+        model_name=model_name,
+        preprocess_args=preprocess_args,
+        preprocess_kwargs=preprocess_kwargs,
+    )
 
 def get_production_model_from_mlflow(model_name: str) -> ModelVersionResponse:
     """Retrieves the production version of a model from MLflow."""
