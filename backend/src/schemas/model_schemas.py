@@ -46,35 +46,45 @@ class ModelInfo(BaseModel):
     
 class ModelTrainingHistory(BaseModel):
     run_id: str
-    run_name: Optional[str] = None
-    start_time: Optional[Any] = None
-    end_time: Optional[Any] = None
+    version: Optional[str] = None
+    start_time: datetime
     status: str
     metrics: Optional[ModelMetrics] = None
-    model_version: Optional[str] = None
 
-class ExperimentHistory(BaseModel):
+
+class IndividualPrediction(BaseModel):
     run_id: str
-    run_name: Optional[str] = None
-    experiment_id: str
-    experiment_name: str
-    start_time: Optional[Any] = None
-    end_time: Optional[Any] = None
+    start_time: datetime
     status: str
-    metrics: Optional[ModelMetrics] = None
-    artifact_uri: Optional[str] = None
-    tags: Optional[Dict[str, Any]] = None
+    inputs: Dict[str, Any]
+    prediction: Any
+
 
 class PredictionResponse(BaseModel):
-    prediction: Any
+    run_id: str
     model_name: str
     model_version: str
-    timestamp: datetime
-    input_data: Dict[str, Any]
+    start_time: datetime
+    status: str
+    num_records: int
+    predictions: List[IndividualPrediction]
+
 
 class PredictionHistory(BaseModel):
     predictions: List[PredictionResponse]
     total_count: int
+
+
+class ExperimentHistory(BaseModel):
+    run_id: str
+    start_time: datetime
+    status: str
+    metrics: Optional[ModelMetrics] = None
+    params: Optional[dict] = None
+    tags: Optional[dict] = None
+    artifact_uri: Optional[str] = None
+    experiment_id: str
+
 
 class ParentExperimentHistory(ExperimentHistory):
     child_runs: List[ExperimentHistory] = []

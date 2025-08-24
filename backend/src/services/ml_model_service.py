@@ -16,7 +16,8 @@ from ..flows import ml_prediction_flow
 from ..custom_scripts.training_script import load_data, process_data, train_model
 from ..schemas.model_schemas import (
     ModelVersionResponse, ModelMetrics, ModelInfo, ExperimentHistory, ModelTrainingHistory,
-    PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary, ParentExperimentHistory
+    PredictionResponse, PredictionHistory, DashboardSummary, ModelSummary, ParentExperimentHistory,
+    IndividualPrediction
 )
 from ..custom_scripts.data_preprocessing_script import process_data as process_data_for_prediction
 
@@ -39,117 +40,8 @@ def _ensure_prediction_experiment():
         print(f"Error creating/getting prediction experiment: {e}")
         return None
 
-def _log_prediction_to_mlflow(prediction, model_name, model_version, input_data):
-    """Log a prediction to MLflow as a run."""
-    try:
-        experiment_id = _ensure_prediction_experiment()
-        if experiment_id is None:
-            print("Failed to create/get prediction experiment")
-            return None
-            
-        with mlflow.start_run(experiment_id=experiment_id):
-            # Log prediction metadata as parameters
-            mlflow.log_param("model_name", model_name)
-            mlflow.log_param("model_version", model_version)
-            mlflow.log_param("prediction_type", type(prediction).__name__)
-            
-            # Log prediction value as metric if it's numeric
-            if isinstance(prediction, (int, float)):
-                mlflow.log_metric("prediction_value", float(prediction))
-            else:
-                mlflow.log_param("prediction_value", str(prediction))
-            
-            # Log input data as parameters (flatten if necessary)
-            for key, value in input_data.items():
-                if isinstance(value, (int, float)):
-                    mlflow.log_metric(f"input_{key}", float(value))
-                else:
-                    mlflow.log_param(f"input_{key}", str(value))
-            
-            # Add tags for easier filtering
-            mlflow.set_tag("mlflow.runName", f"Prediction_{model_name}")
-            mlflow.set_tag("prediction_run", "true")
-            mlflow.set_tag("model_name", model_name)
-            
-            run_info = mlflow.active_run().info
-            return run_info.run_id
-            
-    except Exception as e:
-        print(f"Error logging prediction to MLflow: {e}")
-        return None
-
-def _get_predictions_from_mlflow(limit: int = 50, offset: int = 0) -> List[PredictionResponse]:
-    """Retrieve predictions from MLflow runs."""
-    try:
-        experiment_id = _ensure_prediction_experiment()
-        if experiment_id is None:
-            return []
-        
-        # Search for prediction runs
-        runs_df = mlflow.search_runs(
-            experiment_ids=[experiment_id],
-            filter_string="tags.prediction_run = 'true'",
-            order_by=["start_time DESC"],
-            max_results=limit + offset
-        )
-        
-        if runs_df.empty:
-            return []
-        
-        # Apply pagination
-        paginated_runs = runs_df.iloc[offset:offset + limit]
-        
-        predictions = []
-        for _, run_row in paginated_runs.iterrows():
-            try:
-                # Extract prediction data from the run
-                run_id = run_row['run_id']
-                run = mlflow.get_run(run_id)
-                
-                model_name = run.data.params.get('model_name', 'unknown')
-                model_version = run.data.params.get('model_version', 'unknown')
-                
-                # Get prediction value
-                prediction_value = run.data.metrics.get('prediction_value')
-                if prediction_value is None:
-                    prediction_value = run.data.params.get('prediction_value', 'unknown')
-                
-                # Extract input data
-                input_data = {}
-                for key, value in run.data.params.items():
-                    if key.startswith('input_'):
-                        input_key = key.replace('input_', '')
-                        input_data[input_key] = value
-                
-                # Add metric inputs
-                for key, value in run.data.metrics.items():
-                    if key.startswith('input_'):
-                        input_key = key.replace('input_', '')
-                        input_data[input_key] = value
-                
-                # Create prediction response
-                prediction_response = PredictionResponse(
-                    prediction=prediction_value,
-                    model_name=model_name,
-                    model_version=model_version,
-                    timestamp=datetime.fromtimestamp(run.info.start_time / 1000),
-                    input_data=input_data
-                )
-                
-                predictions.append(prediction_response)
-                
-            except Exception as e:
-                print(f"Error processing prediction run {run_id}: {e}")
-                continue
-                
-        return predictions
-        
-    except Exception as e:
-        print(f"Error retrieving predictions from MLflow: {e}")
-        return []
-
 def _get_total_predictions_count() -> int:
-    """Get total count of predictions from MLflow."""
+    """Get total count of parent prediction runs from MLflow."""
     try:
         experiment_id = _ensure_prediction_experiment()
         if experiment_id is None:
@@ -157,39 +49,131 @@ def _get_total_predictions_count() -> int:
         
         runs_df = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string="tags.prediction_run = 'true'",
-            max_results=10000  # Set high limit to count all
+            filter_string="tags.prediction_batch = 'true'",
+            max_results=50000 
         )
         
-        return len(runs_df) if not runs_df.empty else 0
+        if runs_df.empty:
+            return 0
+
+        try:
+            # Filter for parent runs in pandas by checking for null in the parentRunId tag
+            parent_runs_df = runs_df[runs_df['tags.mlflow.parentRunId'].isnull()]
+            return len(parent_runs_df)
+        except KeyError:
+            # If 'tags.mlflow.parentRunId' column does not exist, it means no run is a child run.
+            # Therefore, all runs are parent runs.
+            return len(runs_df)
         
     except Exception as e:
         print(f"Error counting predictions from MLflow: {e}")
         return 0
 
 def _get_recent_predictions_count(hours: int = 24) -> int:
-    """Get count of recent predictions from MLflow."""
+    """Get count of recent parent prediction runs from MLflow."""
     try:
         experiment_id = _ensure_prediction_experiment()
         if experiment_id is None:
             return 0
         
-        # Calculate timestamp threshold
         from datetime import timedelta
         threshold_time = datetime.now() - timedelta(hours=hours)
         threshold_timestamp = int(threshold_time.timestamp() * 1000)
         
         runs_df = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.prediction_run = 'true' and attribute.start_time >= {threshold_timestamp}",
-            max_results=10000
+            filter_string=f"tags.prediction_batch = 'true' and attribute.start_time >= {threshold_timestamp}",
+            max_results=50000
         )
         
-        return len(runs_df) if not runs_df.empty else 0
+        if runs_df.empty:
+            return 0
+            
+        try:
+            # Filter for parent runs in pandas by checking for null in the parentRunId tag
+            parent_runs_df = runs_df[runs_df['tags.mlflow.parentRunId'].isnull()]
+            return len(parent_runs_df)
+        except KeyError:
+            # If 'tags.mlflow.parentRunId' column does not exist, all runs are parents.
+            return len(runs_df)
         
     except Exception as e:
         print(f"Error counting recent predictions from MLflow: {e}")
         return 0
+
+def get_prediction_history(limit: int = 50, offset: int = 0) -> PredictionHistory:
+    """Retrieve prediction history from MLflow with nested runs."""
+    try:
+        experiment_id = _ensure_prediction_experiment()
+        if experiment_id is None:
+            return PredictionHistory(predictions=[], total_count=0)
+
+        # Search for prediction runs (batches)
+        parent_runs_df = mlflow.search_runs(
+            experiment_ids=[experiment_id],
+            filter_string="tags.prediction_batch = 'true'",
+            order_by=["start_time DESC"]
+        )
+
+        if parent_runs_df.empty:
+            return PredictionHistory(predictions=[], total_count=0)
+
+        try:
+            # Filter for parent runs in pandas by checking for null in the parentRunId tag
+            parent_runs_df = parent_runs_df[parent_runs_df['tags.mlflow.parentRunId'].isnull()]
+        except KeyError:
+            # If 'tags.mlflow.parentRunId' column does not exist, all runs are parents.
+            pass
+
+        total_count = len(parent_runs_df)
+        
+        # Apply pagination to parent runs
+        paginated_parent_runs = parent_runs_df.iloc[offset:offset + limit]
+
+        prediction_batches = []
+        for _, parent_run_row in paginated_parent_runs.iterrows():
+            parent_run_id = parent_run_row['run_id']
+            parent_run = mlflow.get_run(parent_run_id)
+            
+            # Search for child runs of the current parent
+            child_runs_df = mlflow.search_runs(
+                experiment_ids=[experiment_id],
+                filter_string=f"tags.mlflow.parentRunId = '{parent_run_id}'",
+                order_by=["start_time ASC"]
+            )
+            
+            individual_predictions = []
+            if not child_runs_df.empty:
+                for _, child_run_row in child_runs_df.iterrows():
+                    child_run_id = child_run_row['run_id']
+                    child_run = mlflow.get_run(child_run_id)
+                    
+                    inputs = {k: v for k, v in child_run.data.params.items()}
+                    prediction_value = child_run.data.metrics.get('prediction_value', 'N/A')
+
+                    individual_predictions.append(IndividualPrediction(
+                        run_id=child_run_id,
+                        start_time=datetime.fromtimestamp(child_run.info.start_time / 1000),
+                        status=child_run.info.status,
+                        inputs=inputs,
+                        prediction=prediction_value
+                    ))
+
+            prediction_batches.append(PredictionResponse(
+                run_id=parent_run_id,
+                model_name=parent_run.data.params.get('model_name', 'unknown'),
+                model_version=parent_run.data.params.get('model_version', 'unknown'),
+                start_time=datetime.fromtimestamp(parent_run.info.start_time / 1000),
+                status=parent_run.info.status,
+                num_records=len(individual_predictions),
+                predictions=individual_predictions
+            ))
+
+        return PredictionHistory(predictions=prediction_batches, total_count=total_count)
+
+    except Exception as e:
+        print(f"Error retrieving prediction history from MLflow: {e}")
+        return PredictionHistory(predictions=[], total_count=0)
 
 def run_ml_training_pipeline():
     """Runs the ML training pipeline."""
@@ -345,7 +329,8 @@ def predict(model_name: str, data_path: str):
     else:
         prediction = output
     
-    _log_prediction_to_mlflow(prediction, model_name, str(prod_model_version.version), data)
+    # This function is now handled by the prediction flow, so this call is removed.
+    # _log_prediction_to_mlflow(prediction, model_name, str(prod_model_version.version), data)
 
     return prediction
     
@@ -522,15 +507,6 @@ def get_latest_experiment() -> Optional[ExperimentHistory]:
     """Get the most recent experiment run."""
     history_data = get_experiment_history(limit=1)
     return history_data["runs"][0] if history_data["runs"] else None
-
-def get_prediction_history(limit: int = 50, offset: int = 0) -> PredictionHistory:
-    """Get prediction history from storage."""
-    predictions = _get_predictions_from_mlflow(limit, offset)
-    
-    return PredictionHistory(
-        predictions=predictions,
-        total_count=_get_total_predictions_count()
-    )
 
 def get_dashboard_summary() -> DashboardSummary:
     """Get summary information for the dashboard with all registered models."""

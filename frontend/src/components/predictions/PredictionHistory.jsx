@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Table, Spin, Alert, Button, Tooltip } from 'antd';
-import { EyeOutlined } from '@ant-design/icons';
+import { Table, Spin, Alert, Button, Tooltip, Modal, Descriptions } from 'antd';
+import { EyeOutlined, DownOutlined } from '@ant-design/icons';
 import { fetchPredictionHistory } from '../../store/slices/predictionSlice';
 import { format } from 'date-fns';
 
@@ -10,65 +10,94 @@ const PredictionHistory = () => {
   const { predictionHistory, loading, error } = useSelector(
     (state) => state.prediction,
   );
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
 
   useEffect(() => {
     dispatch(fetchPredictionHistory({}));
   }, [dispatch]);
 
+  const showModal = (prediction) => {
+    setSelectedPrediction(prediction);
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setSelectedPrediction(null);
+  };
+
+  const expandedRowRender = (record) => {
+    const nestedColumns = [
+      {
+        title: 'Run ID',
+        dataIndex: 'run_id',
+        key: 'run_id',
+        render: (text) => (text ? <Tooltip title={text}>{text.substring(0, 8)}...</Tooltip> : 'N/A'),
+      },
+      {
+        title: 'Start Time',
+        dataIndex: 'start_time',
+        key: 'start_time',
+        render: (text) => (text ? format(new Date(text), 'yyyy-MM-dd HH:mm:ss') : 'N/A'),
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        key: 'status',
+      },
+      {
+        title: 'Prediction',
+        dataIndex: 'prediction',
+        key: 'prediction',
+        render: (text) => JSON.stringify(text),
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        render: (text, record) => (
+          <Button
+            icon={<EyeOutlined />}
+            onClick={() => showModal(record)}
+          >
+            View Inputs
+          </Button>
+        ),
+      },
+    ];
+
+    return <Table columns={nestedColumns} dataSource={record.predictions} pagination={false} rowKey="run_id" />;
+  };
+
   const columns = [
     {
-      title: 'Run ID',
+      title: 'Batch Run ID',
       dataIndex: 'run_id',
       key: 'run_id',
-      render: (text) => (text ? text.substring(0, 8) + '...' : 'N/A'),
+      render: (text) => (text ? <Tooltip title={text}>{text.substring(0, 8)}...</Tooltip> : 'N/A'),
     },
     {
-      title: 'Model Name',
+      title: 'Model',
       dataIndex: 'model_name',
       key: 'model_name',
+      render: (text, record) => `${text} (v${record.model_version})`,
     },
     {
-      title: 'Model Version',
-      dataIndex: 'model_version',
-      key: 'model_version',
+      title: 'Batch Time',
+      dataIndex: 'start_time',
+      key: 'start_time',
+      render: (text) => (text ? format(new Date(text), 'yyyy-MM-dd HH:mm:ss') : 'N/A'),
     },
     {
-      title: 'Prediction Time',
-      dataIndex: 'prediction_time',
-      key: 'prediction_time',
-      render: (text) => {
-        if (!text) return 'N/A';
-        const date = new Date(text);
-        if (isNaN(date.getTime())) {
-          return 'Invalid Date';
-        }
-        return format(date, 'yyyy-MM-dd HH:mm:ss');
-      },
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
     },
     {
-      title: 'Input Data',
-      dataIndex: 'input_data_path',
-      key: 'input_data_path',
-      render: (text) =>
-        text ? (
-          <Tooltip title={text}>
-            <span>{text.split('/').pop()}</span>
-          </Tooltip>
-        ) : (
-          'N/A'
-        ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (text, record) => (
-        <Button
-          icon={<EyeOutlined />}
-          onClick={() => console.log('View details for', record.run_id)}
-        >
-          View Results
-        </Button>
-      ),
+      title: '# Records',
+      dataIndex: 'num_records',
+      key: 'num_records',
+      align: 'center',
     },
   ];
 
@@ -88,16 +117,47 @@ const PredictionHistory = () => {
   }
 
   return (
-    <Table
-      columns={columns}
-      dataSource={
-        predictionHistory && predictionHistory.predictions
-          ? predictionHistory.predictions
-          : []
-      }
-      rowKey="run_id"
-      pagination={{ pageSize: 10 }}
-    />
+    <>
+      <Table
+        columns={columns}
+        dataSource={
+          predictionHistory && predictionHistory.predictions
+            ? predictionHistory.predictions
+            : []
+        }
+        rowKey="run_id"
+        pagination={{ pageSize: 10, total: predictionHistory?.total_count }}
+        expandable={{
+          expandedRowRender,
+          expandIcon: ({ expanded, onExpand, record }) =>
+            expanded ? (
+              <DownOutlined onClick={e => onExpand(record, e)} />
+            ) : (
+              <EyeOutlined onClick={e => onExpand(record, e)} />
+            ),
+        }}
+      />
+      <Modal
+        title="Prediction Input Details"
+        visible={isModalVisible}
+        onCancel={handleCancel}
+        footer={[
+          <Button key="back" onClick={handleCancel}>
+            Close
+          </Button>,
+        ]}
+      >
+        {selectedPrediction && (
+          <Descriptions bordered column={1}>
+            {Object.entries(selectedPrediction.inputs).map(([key, value]) => (
+              <Descriptions.Item label={key} key={key}>
+                {String(value)}
+              </Descriptions.Item>
+            ))}
+          </Descriptions>
+        )}
+      </Modal>
+    </>
   );
 };
 
