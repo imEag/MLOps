@@ -8,6 +8,7 @@ import {
   Spin,
   Popconfirm,
   Divider,
+  App,
 } from 'antd';
 import { useState, useEffect } from 'react';
 import { fileService } from '../../services/fileService';
@@ -31,6 +32,7 @@ const Predictions = () => {
   const [predicting, setPredicting] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const isMobile = useIsMobile();
+  const { notification } = App.useApp();
 
   const fetchFiles = async () => {
     setLoadingTree(true);
@@ -71,9 +73,12 @@ const Predictions = () => {
     setIsModalVisible(false);
     try {
       await modelService.predict(modelName, dataPath);
-      message.success(
-        'Prediction started successfully. You can see the results in the prediction history section.',
-      );
+      notification.success({
+        message: 'Prediction Started',
+        description:
+          'This process can take several minutes. The results will be shown in the prediction history table and in the runs sections in prefect.',
+        duration: 10, // Keep the notification open for 10 seconds
+      });
     } catch (error) {
       message.error('Failed to start prediction.');
     } finally {
