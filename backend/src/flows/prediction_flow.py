@@ -90,13 +90,13 @@ def _log_prediction_to_mlflow(
 
                     # Log the prediction as a metric
                     if isinstance(pred_val, (int, float)):
-                        mlflow.log_metric("prediction", float(pred_val))
+                        mlflow.log_metric("prediction_value", float(pred_val))
                     else:
                         # Attempt to convert to float, otherwise log as param
                         try:
-                            mlflow.log_metric("prediction", float(pred_val))
+                            mlflow.log_metric("prediction_value", float(pred_val))
                         except (ValueError, TypeError):
-                            mlflow.log_param("prediction", str(pred_val))
+                            mlflow.log_param("prediction_value", str(pred_val))
 
             return parent_run_id
 
