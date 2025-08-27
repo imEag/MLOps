@@ -16,7 +16,6 @@ import { modelService } from '../../services/modelService';
 import { useIsMobile } from '../../hooks/useBreakpoint';
 import PredictionModal from '../../components/predictions/PredictionModal';
 import PredictionHistory from '../../components/predictions/PredictionHistory';
-import PredictionStats from '../../components/predictions/PredictionStats';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -220,9 +219,6 @@ const Predictions = () => {
         onConfirm={handleConfirmPrediction}
         filePath={selectedKey}
       />
-      <Divider />
-      <Title level={3}>Prediction Statistics</Title>
-      <PredictionStats />
       <Divider />
       <Title level={3}>Prediction History</Title>
       <PredictionHistory />
