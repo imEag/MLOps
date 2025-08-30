@@ -9,7 +9,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from src.flows.training_flow import ml_pipeline_flow
-from src.training_script.training_script import load_data, process_data, train_model
+from src.custom_scripts.training_script import load_data, process_data, train_model
 
 if __name__ == "__main__":
     print("Starting the ML training pipeline flow...")

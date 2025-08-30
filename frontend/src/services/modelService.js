@@ -73,8 +73,10 @@ export const modelService = {
   },
 
   // Make prediction
-  predict: async (modelName, data) => {
-    const response = await api.post(`/api/models/${modelName}/predict`, data);
+  predict: async (modelName, dataPath) => {
+    const response = await api.post(
+      `/api/models/${modelName}/predict?data_path=${dataPath}`,
+    );
     return response.data;
   },
 

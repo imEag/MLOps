@@ -96,7 +96,6 @@ const ModelManagement = () => {
               icon={<PlayCircleOutlined />}
               onClick={handleStartTraining}
               loading={trainingLoading}
-              disabled={!selectedModelName}
             >
               {isMobile ? 'Train' : 'Start New Training'}
             </Button>
@@ -130,15 +129,17 @@ const ModelManagement = () => {
           <Col xs={24}>
             <TrainingHistory modelName={selectedModelName} />
           </Col>
-          <Col xs={24}>
-            <ExperimentHistory />
-          </Col>
         </Row>
       ) : (
         !loading && (
           <Empty description="No model selected. Please choose a model from the list above." />
         )
       )}
+      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+        <Col xs={24}>
+          <ExperimentHistory />
+        </Col>
+      </Row>
     </div>
   );
 };
