@@ -1,0 +1,12 @@
+# Ignore dependencies and VCS
+node_modules/
+.git/
+.gitignore
+.DS_Store
+**/.DS_Store
+
+# Build artifacts
+.dist/
+dist/
+.vite/
+.cache/

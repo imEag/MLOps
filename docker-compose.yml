@@ -19,6 +19,7 @@ services:
       retries: 5
 
   mlflow:
+    image: imeag/mlops-mlflow:latest
     build:
       context: ./backend
       dockerfile: Dockerfile.mlflow
@@ -43,6 +44,7 @@ services:
       - mlops-network
 
   prefect:
+    image: imeag/mlops-prefect:latest
     build: 
       context: ./backend
       dockerfile: Dockerfile
@@ -67,6 +69,7 @@ services:
       - mlops-network
 
   fastapi:
+    image: imeag/mlops-fastapi:latest
     build:
       context: ./backend
       dockerfile: Dockerfile.fastapi
@@ -97,6 +100,7 @@ services:
       - mlops-network
 
   frontend:
+    image: imeag/mlops-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
