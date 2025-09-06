@@ -1,5 +1,12 @@
 # MLOps "NeuroOps" Platform
 
+For a detailed guide on how to use and customize the system, please refer to our user manuals:
+
+<p align="center">
+  <a href="USER_MANUAL.md"><img src="https://img.shields.io/badge/User%20Manual-English-blue?style=for-the-badge"></a>
+  <a href="MANUAL_USUARIO.md"><img src="https://img.shields.io/badge/Manual%20de%20Usuario-Español-orange?style=for-the-badge"></a>
+</p>
+
 An end-to-end Machine Learning Operations (MLOps) platform that implements the core ML lifecycle: training, tracking, versioning, promotion to production and serving. The platform makes it easy to start training runs, persist parameters/metrics/artifacts, manage model versions and promote a model to production for serving.
 
 The system supports predictions from raw data (for example, EEG in BIDS format): uploads are preprocessed, features are extracted, inference is executed with the selected production model, and inputs/outputs are logged for auditability.
