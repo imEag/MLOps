@@ -1,4 +1,4 @@
-# Anexo B: Manual de Usuario
+# Manual de Usuario
 
 ## 1. Introducción
 
