@@ -100,8 +100,12 @@ const ExperimentHistory = () => {
     }
   };
 
-  const formatDurationFromTimestamps = (start, end) => {
-    if (!start || !end) return 'N/A';
+  const formatDurationFromTimestamps = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'N/A';
+
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+
     const duration = (end - start) / 1000; // seconds
     if (duration < 0) return 'N/A';
     if (duration < 60) return `${duration.toFixed(1)}s`;
@@ -123,6 +127,7 @@ const ExperimentHistory = () => {
         title: 'Task Name',
         dataIndex: 'run_name',
         key: 'run_name',
+        render: (text) => text || 'N/A',
       },
       {
         title: 'Status',

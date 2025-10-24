@@ -84,6 +84,10 @@ class ExperimentHistory(BaseModel):
     tags: Optional[dict] = None
     artifact_uri: Optional[str] = None
     experiment_id: str
+    end_time: Optional[datetime] = None
+    experiment_name: Optional[str] = None
+    run_name: Optional[str] = None
+
 
 
 class ParentExperimentHistory(ExperimentHistory):
