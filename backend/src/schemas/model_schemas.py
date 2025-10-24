@@ -50,6 +50,9 @@ class ModelTrainingHistory(BaseModel):
     start_time: datetime
     status: str
     metrics: Optional[ModelMetrics] = None
+    end_time: Optional[datetime] = None
+    model_version: Optional[str] = None
+    run_name: Optional[str] = None
 
 
 class IndividualPrediction(BaseModel):
